@@ -124,7 +124,7 @@ public class CPU
     }
 
     /**
-     * getLIMIT
+     * getLIM
      *
      * @return the value of the limit register
      */
@@ -263,11 +263,67 @@ public class CPU
     }//printInstr
 
 
-    //<insert method header here>
+    //TODO: <insert method header here>
     public void run()
     {
-        //%%% WRITE THIS METHOD and any related helper methods.  %%%
-        
+       
+        while (true) {
+
+            //Fetch next instruction
+            int instr[] = m_RAM.fetch(getPC());
+
+            //Debug information if enabled
+            if (m_verbose) {
+                regDump();
+                printInstr(instr);
+            }
+
+            //Determine action to take for instruction
+            switch(instr[0]) {
+                case SET:
+                    break;
+                case ADD:
+                    break;
+                case SUB:
+                    break;
+                case MUL:
+                    break;
+                case DIV:
+                    break;
+                case COPY:
+                    break;
+                case BRANCH:
+                    break;
+                case BNE:
+                    break;
+                case BLT:
+                    break;
+                case POP:
+                    break;
+                case PUSH:
+                    break;
+                case LOAD:
+                    break;
+                case SAVE:
+                    break;
+                case TRAP: // Trap is not yet supported. Break out of run.
+                    return;
+                default: // This is bad. Why did this happen to me?
+                    System.out.println("ERROR: unsupported opcode: " + instr[0]);
+                    System.out.println("NOW YOU DIE!!!!"); //So much more creative than SegFault
+                    return;
+            }//switch
+
+            setPC(getPC() + INSTRSIZE); //Increment the PC counter
+
+            //Check for out of bounds PC
+            if (getPC() < getBASE() || getPC() > getLIM()) {
+                System.out.println("ERROR: PC out of bounds.");
+                System.out.println("NOW YOU DIE!!!!");
+                return;
+            }
+        }
+
     }//run
     
 };//class CPU
