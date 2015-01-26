@@ -95,12 +95,24 @@ public class SOS
      *----------------------------------------------------------------------
      */
 
-    //insert method header here
+    //TODO insert method header here
     public void createProcess(Program prog, int allocSize)
     {
         //%%%WRITE THIS METHOD and any helper methods you deem necessary.%%%
-        
-        
+         
+        final int base = 4; //This is just an arbitrary base, hardcoded for now
+        m_CPU.setBASE(base);
+        //TODO: do I need to adjust the allocSize at all?
+        m_CPU.setLIM(base + allocSize);
+        m_CPU.setPC(base);
+        m_CPU.setSP(0);
+
+        int[] progArray = prog.export();
+
+        for (int progAddr=0; progAddr<progArray.length; ++progAddr ){
+            m_RAM.write(base + progAddr, progArray[progAddr]);
+        }
+
     }//createProcess
         
     /*======================================================================
