@@ -7,6 +7,8 @@ import java.util.*;
  * microcomputer.  This includes a processor chip, RAM and I/O devices.  It is
  * designed to demonstrate a simulated operating system (SOS).
  *
+ * Authors include: Stephen Robinson and Camden McKone
+ *
  * @see RAM
  * @see SOS
  * @see Program
@@ -59,7 +61,7 @@ public class CPU
     /**
      * specifies whether the CPU should output details of its work
      **/
-    private boolean m_verbose = false;
+    private boolean m_verbose = true;
 
     /**
      * This array contains all the registers on the "chip".
@@ -262,6 +264,44 @@ public class CPU
 
     }//printInstr
 
+    /**
+     * validMemory
+     *
+     * Determines if physical address respects BASE and LIM registers.
+     *
+     * @param addr the address to check
+     *
+     * @return true iff the address is valid.
+     */
+    public boolean validMemory(int addr){
+        return (addr >= m_registers[BASE] && addr <= m_registers[LIM]);
+    }
+
+    /**
+     * pushStack
+     *
+     * Pushes a value to the stack.
+     *
+     * @param value the value to push to the stack.
+     */
+    private void pushStack(int value) {
+        m_RAM.write(m_registers[SP], value);
+        //TODO: empty stack pop
+        m_registers[SP]--;
+    }
+
+    /**
+     * popStack
+     *
+     * Pops a value from the stack.
+     *
+     * @return The value poped from the stack.
+     */
+    private int popStack() {
+        //TODO: empty stack pop
+        m_registers[SP]--;
+        return m_RAM.read(m_registers[SP+1]);
+    }
 
     //TODO: <insert method header here>
     public void run()
@@ -270,41 +310,76 @@ public class CPU
         while (true) {
 
             //Fetch next instruction
-            int instr[] = m_RAM.fetch(getPC());
+            int instr[] = m_RAM.fetch(m_registers[PC]);
 
             //Debug information if enabled
             if (m_verbose) {
+                System.out.println(".");
                 regDump();
                 printInstr(instr);
             }
 
             //Determine action to take for instruction
+            int addr;
             switch(instr[0]) {
                 case SET:
+                    m_registers[instr[1]] = instr[2];
                     break;
                 case ADD:
+                    m_registers[instr[1]] = m_registers[instr[2]] +
+                                            m_registers[instr[3]];
                     break;
                 case SUB:
+                    m_registers[instr[1]] = m_registers[instr[2]] -
+                                            m_registers[instr[3]];
                     break;
                 case MUL:
+                    m_registers[instr[1]] = m_registers[instr[2]] *
+                                            m_registers[instr[3]];
                     break;
                 case DIV:
+                    m_registers[instr[1]] = m_registers[instr[2]] /
+                                            m_registers[instr[3]];
                     break;
                 case COPY:
+                    m_registers[instr[1]] = m_registers[instr[2]];
                     break;
                 case BRANCH:
+                    m_registers[PC] = instr[1];
                     break;
                 case BNE:
+                    if (m_registers[instr[1]] != m_registers[instr[2]]) {
+                        m_registers[PC] = instr[3];
+                    }
                     break;
                 case BLT:
+                    if (m_registers[instr[1]] < m_registers[instr[2]]) {
+                        m_registers[PC] = instr[3];
+                    }
                     break;
                 case POP:
+                    m_registers[instr[1]] = popStack();
                     break;
                 case PUSH:
+                    pushStack(m_registers[instr[1]]);
                     break;
                 case LOAD:
+                    addr = instr[2] + m_registers[BASE];
+                    if (!validMemory(addr)) {
+                        System.out.println("ERROR: SAVE out of bounds.");
+                        System.out.println("NOW YOU DIE!!!!");
+                        return;
+                    }
+                    m_registers[instr[1]] = m_RAM.read(instr[2]);
                     break;
                 case SAVE:
+                    addr = instr[2] + m_registers[BASE];
+                    if (!validMemory(addr)) {
+                        System.out.println("ERROR: SAVE out of bounds.");
+                        System.out.println("NOW YOU DIE!!!!");
+                        return;
+                    }
+                    m_RAM.write(instr[2], m_registers[instr[1]] );
                     break;
                 case TRAP: // Trap is not yet supported. Break out of run.
                     return;
@@ -314,10 +389,10 @@ public class CPU
                     return;
             }//switch
 
-            setPC(getPC() + INSTRSIZE); //Increment the PC counter
+            m_registers[PC] += INSTRSIZE; //Increment the PC counter
 
             //Check for out of bounds PC
-            if (getPC() < getBASE() || getPC() > getLIM()) {
+            if (!validMemory(m_registers[PC])) {
                 System.out.println("ERROR: PC out of bounds.");
                 System.out.println("NOW YOU DIE!!!!");
                 return;
