@@ -97,14 +97,18 @@ public class SOS
      *----------------------------------------------------------------------
      */
 
-    //TODO insert method header here
+    /**
+     * createProcess
+     *
+     * Creates one process for the CPU.
+     *
+     * @param prog The program class to be loaded into memory.
+     * @param allocSize The amount of memory to allocate for the program.
+     */
     public void createProcess(Program prog, int allocSize)
     {
-        //%%%WRITE THIS METHOD and any helper methods you deem necessary.%%%
-         
         final int base = 4; //This is just an arbitrary base, hardcoded for now
         m_CPU.setBASE(base);
-        //TODO: do I need to adjust the allocSize at all?
         m_CPU.setLIM(base + allocSize);
         m_CPU.setPC(0); //We are going to use a logical (not physical) PC
 
@@ -114,7 +118,6 @@ public class SOS
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
 
-        //TODO: is this the correct stack pointer
         m_CPU.setSP(progArray.length);
 
     }//createProcess

@@ -286,7 +286,7 @@ public class CPU
      */
     private void pushStack(int value) {
         m_RAM.write(m_registers[SP] + m_registers[BASE], value);
-        //TODO: empty stack pop
+        //TODO: stack overflow check
         m_registers[SP]++;
     }
 
@@ -303,7 +303,11 @@ public class CPU
         return m_RAM.read(m_registers[SP] + m_registers[BASE]);
     }
 
-    //TODO: <insert method header here>
+    /**
+     * run
+     *
+     * Start the CPU simulation. Exits only on chrash or exit trap.
+     */
     public void run()
     {
        
@@ -364,28 +368,30 @@ public class CPU
                     pushStack(m_registers[instr[1]]);
                     break;
                 case LOAD:
-                    addr = instr[2] + m_registers[BASE];
+                    addr = m_registers[instr[2]] + m_registers[BASE];
                     if (!validMemory(addr)) {
-                        System.out.println("ERROR: SAVE out of bounds.");
+                        System.out.println("ERROR: LOAD out of bounds.");
                         System.out.println("NOW YOU DIE!!!!");
                         return;
                     }
-                    m_registers[instr[1]] = m_RAM.read(instr[2]);
+                    m_registers[instr[1]] = m_RAM.read(addr);
                     break;
                 case SAVE:
-                    addr = instr[2] + m_registers[BASE];
+                    addr = m_registers[instr[2]] + m_registers[BASE];
                     if (!validMemory(addr)) {
                         System.out.println("ERROR: SAVE out of bounds.");
                         System.out.println("NOW YOU DIE!!!!");
                         return;
                     }
-                    m_RAM.write(instr[2], m_registers[instr[1]] );
+                    m_RAM.write(addr, m_registers[instr[1]]);
                     break;
                 case TRAP: // Trap is not yet supported. Break out of run.
                     return;
                 default: // This is bad. Why did this happen to me?
-                    System.out.println("ERROR: unsupported opcode: " + instr[0]);
-                    System.out.println("NOW YOU DIE!!!!"); //So much more creative than SegFault
+                    System.out.println("ERROR: unsupported opcode: " +
+                                        instr[0]);
+                    //So much more creative than SegFault
+                    System.out.println("NOW YOU DIE!!!!");
                     return;
             }//switch
 
