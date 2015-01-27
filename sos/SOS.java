@@ -105,13 +105,15 @@ public class SOS
         //TODO: do I need to adjust the allocSize at all?
         m_CPU.setLIM(base + allocSize);
         m_CPU.setPC(base);
-        m_CPU.setSP(0);
 
         int[] progArray = prog.export();
 
         for (int progAddr=0; progAddr<progArray.length; ++progAddr ){
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
+
+        //TODO: is this the correct stack pointer.
+        m_CPU.setSP(progArray.length);
 
     }//createProcess
         
