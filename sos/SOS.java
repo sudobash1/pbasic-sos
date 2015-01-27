@@ -106,7 +106,7 @@ public class SOS
         m_CPU.setBASE(base);
         //TODO: do I need to adjust the allocSize at all?
         m_CPU.setLIM(base + allocSize);
-        m_CPU.setPC(base);
+        m_CPU.setPC(0); //We are going to use a logical (not physical) PC
 
         int[] progArray = prog.export();
 
@@ -114,7 +114,7 @@ public class SOS
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
 
-        //TODO: is this the correct stack pointer.
+        //TODO: is this the correct stack pointer
         m_CPU.setSP(progArray.length);
 
     }//createProcess

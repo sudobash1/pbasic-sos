@@ -285,9 +285,9 @@ public class CPU
      * @param value the value to push to the stack.
      */
     private void pushStack(int value) {
-        m_RAM.write(m_registers[SP], value);
+        m_RAM.write(m_registers[SP] + m_registers[BASE], value);
         //TODO: empty stack pop
-        m_registers[SP]--;
+        m_registers[SP]++;
     }
 
     /**
@@ -300,7 +300,7 @@ public class CPU
     private int popStack() {
         //TODO: empty stack pop
         m_registers[SP]--;
-        return m_RAM.read(m_registers[SP+1]);
+        return m_RAM.read(m_registers[SP] + m_registers[BASE]);
     }
 
     //TODO: <insert method header here>
@@ -310,7 +310,7 @@ public class CPU
         while (true) {
 
             //Fetch next instruction
-            int instr[] = m_RAM.fetch(m_registers[PC]);
+            int instr[] = m_RAM.fetch(m_registers[BASE] + m_registers[PC]);
 
             //Debug information if enabled
             if (m_verbose) {
@@ -345,16 +345,16 @@ public class CPU
                     m_registers[instr[1]] = m_registers[instr[2]];
                     break;
                 case BRANCH:
-                    m_registers[PC] = instr[1];
+                    m_registers[PC] = instr[1] - 4;
                     break;
                 case BNE:
                     if (m_registers[instr[1]] != m_registers[instr[2]]) {
-                        m_registers[PC] = instr[3];
+                        m_registers[PC] = instr[3] - 4;
                     }
                     break;
                 case BLT:
                     if (m_registers[instr[1]] < m_registers[instr[2]]) {
-                        m_registers[PC] = instr[3];
+                        m_registers[PC] = instr[3] - 4;
                     }
                     break;
                 case POP:
@@ -392,7 +392,7 @@ public class CPU
             m_registers[PC] += INSTRSIZE; //Increment the PC counter
 
             //Check for out of bounds PC
-            if (!validMemory(m_registers[PC])) {
+            if (!validMemory(m_registers[BASE] + m_registers[PC])) {
                 System.out.println("ERROR: PC out of bounds.");
                 System.out.println("NOW YOU DIE!!!!");
                 return;
