@@ -182,6 +182,49 @@ public class SOS implements CPU.TrapHandler
      * System Calls
      *----------------------------------------------------------------------
      */
+
+    /**
+     * syscallExit
+     *
+     * Exits from the current process.
+     */
+    private void syscallExit() {
+        System.exit(0);
+    }
+
+    /**
+     * syscallOutput
+     *
+     * Outputs the top number from the stack.
+     */
+    private void syscallOutput() {
+        System.out.println("OUTPUT: " + m_CPU.popStack());
+    }
+
+    /**
+     * syscallGetPID
+     *
+     * Pushes the PID to the stack.
+     */
+    private void syscallGetPID() {
+        final int pid = 42; //just for now we will use a constant pid.
+        m_CPU.pushStack(pid);
+    }
+
+    /**
+     * syscallCoreDump
+     *
+     * Prints the registers and top three stack items, then exits the process.
+     */
+    private void syscallCoreDump() {
+        m_CPU.regDump();
+
+        System.out.println("Top three stack items:");
+        for (int i=0; i<3; ++i){
+            System.out.println(m_CPU.popStack());
+        }
+        syscallExit();
+    }
     
     /**
      * systemCall
@@ -190,9 +233,20 @@ public class SOS implements CPU.TrapHandler
      */
     public void systemCall()
     {
-        //%%%REPLACE THESE LINES WITH APPROPRIATE CODE
-        System.out.println("TRAP handled!");
-        System.exit(0);
+        switch (m_CPU.popStack()) {
+            case SYSCALL_EXIT:
+                syscallExit();
+                break;
+            case SYSCALL_OUTPUT:
+                syscallOutput();
+                break;
+            case SYSCALL_GETPID:
+                syscallGetPID();
+                break;
+            case SYSCALL_COREDUMP:
+                syscallCoreDump();
+                break;
+        }
     }
 
 };//class SOS

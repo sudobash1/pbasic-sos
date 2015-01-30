@@ -225,7 +225,7 @@ public class CPU
      *
      * Prints the values of the registers.  Useful for debugging.
      */
-    private void regDump()
+    public void regDump()
     {
         for(int i = 0; i < NUMGENREG; i++)
         {
@@ -320,7 +320,7 @@ public class CPU
      *
      * @param value the value to push to the stack.
      */
-    private void pushStack(int value) {
+    public void pushStack(int value) {
         m_RAM.write(m_registers[SP] + m_registers[BASE], value);
         //TODO: stack overflow check
         m_registers[SP]++;
@@ -333,7 +333,7 @@ public class CPU
      *
      * @return The value poped from the stack.
      */
-    private int popStack() {
+    public int popStack() {
         //TODO: empty stack pop
         m_registers[SP]--;
         return m_RAM.read(m_registers[SP] + m_registers[BASE]);
