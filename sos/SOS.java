@@ -172,7 +172,7 @@ public class SOS implements CPU.TrapHandler
      */
     public void interruptIllegalInstruction(int[] instr){
         System.out.println("Error: Illegal Instruction:");
-        m_CPU.printInstr(instr);
+        System.out.println(instr[0] + ", " + instr[1] + ", " + instr[2] + ", " + instr[3]);
         System.out.println("NOW YOU DIE!!!");
         System.exit(0);
     }
@@ -216,6 +216,9 @@ public class SOS implements CPU.TrapHandler
      * Prints the registers and top three stack items, then exits the process.
      */
     private void syscallCoreDump() {
+
+        System.out.println("\n\nCORE DUMP!");
+
         m_CPU.regDump();
 
         System.out.println("Top three stack items:");

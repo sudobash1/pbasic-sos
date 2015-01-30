@@ -1,0 +1,14 @@
+#add some stuff to the stack
+SET R0 1
+PUSH R0
+SET R0 2
+PUSH R0
+SET R0 3
+PUSH R0
+SET R0 4
+PUSH R0
+
+
+SET R0 9
+PUSH R0
+TRAP
