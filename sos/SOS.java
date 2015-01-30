@@ -56,6 +56,7 @@ public class SOS implements CPU.TrapHandler
     {
         //Init member list
         m_CPU = c;
+        m_CPU.registerTrapHandler(this);
         m_RAM = r;
     }//SOS ctor
     
@@ -129,8 +130,6 @@ public class SOS implements CPU.TrapHandler
         }
 
         m_CPU.setSP(progArray.length);
-
-        m_CPU.registerTrapHandler(this);
 
     }//createProcess
  

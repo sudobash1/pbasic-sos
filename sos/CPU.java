@@ -378,6 +378,10 @@ public class CPU
                                             m_registers[instr[3]];
                     break;
                 case DIV:
+                    if (m_registers[instr[3]] == 0) {
+                        m_TH.interruptDivideByZero();
+                        return;
+                    }
                     m_registers[instr[1]] = m_registers[instr[2]] /
                                             m_registers[instr[3]];
                     break;
@@ -406,8 +410,7 @@ public class CPU
                 case LOAD:
                     addr = m_registers[instr[2]] + m_registers[BASE];
                     if (!validMemory(addr)) {
-                        System.out.println("ERROR: LOAD out of bounds.");
-                        System.out.println("NOW YOU DIE!!!!");
+                        m_TH.interruptIllegalMemoryAccess(addr);
                         return;
                     }
                     m_registers[instr[1]] = m_RAM.read(addr);
@@ -415,8 +418,7 @@ public class CPU
                 case SAVE:
                     addr = m_registers[instr[2]] + m_registers[BASE];
                     if (!validMemory(addr)) {
-                        System.out.println("ERROR: SAVE out of bounds.");
-                        System.out.println("NOW YOU DIE!!!!");
+                        m_TH.interruptIllegalMemoryAccess(addr);
                         return;
                     }
                     m_RAM.write(addr, m_registers[instr[1]]);
@@ -425,10 +427,7 @@ public class CPU
                     m_TH.systemCall();
                     break;
                 default: // This is bad. Why did this happen to me?
-                    System.out.println("ERROR: unsupported opcode: " +
-                                        instr[0]);
-                    //So much more creative than SegFault
-                    System.out.println("NOW YOU DIE!!!!");
+                    m_TH.interruptIllegalInstruction(instr);
                     return;
             }//switch
 
@@ -436,8 +435,7 @@ public class CPU
 
             //Check for out of bounds PC
             if (!validMemory(m_registers[BASE] + m_registers[PC])) {
-                System.out.println("ERROR: PC out of bounds.");
-                System.out.println("NOW YOU DIE!!!!");
+                m_TH.interruptIllegalMemoryAccess(m_registers[BASE] + m_registers[PC]);
                 return;
             }
         }
