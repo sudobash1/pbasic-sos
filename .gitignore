@@ -2,6 +2,9 @@
 tags
 *.sw*
 
+#For our class
+tmp/*
+
 *.class
 
 # Mobile Tools for Java (J2ME)
