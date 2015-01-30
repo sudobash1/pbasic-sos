@@ -321,8 +321,13 @@ public class CPU
      * @param value the value to push to the stack.
      */
     public void pushStack(int value) {
+        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
+            //Stack overflow!
+            //This was probably deliberate because we had to overwrite the
+            //program with stack memory to do this.
+            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
+        }
         m_RAM.write(m_registers[SP] + m_registers[BASE], value);
-        //TODO: stack overflow check
         m_registers[SP]++;
     }
 
@@ -334,7 +339,10 @@ public class CPU
      * @return The value poped from the stack.
      */
     public int popStack() {
-        //TODO: empty stack pop
+        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
+            //Stack underflow!
+            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
+        }
         m_registers[SP]--;
         return m_RAM.read(m_registers[SP] + m_registers[BASE]);
     }

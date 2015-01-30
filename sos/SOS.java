@@ -129,7 +129,7 @@ public class SOS implements CPU.TrapHandler
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
 
-        m_CPU.setSP(progArray.length);
+        m_CPU.setSP(m_CPU.getLIM()); //Stack starts at the bottom and grows up.
 
     }//createProcess
  
@@ -220,7 +220,12 @@ public class SOS implements CPU.TrapHandler
 
         System.out.println("Top three stack items:");
         for (int i=0; i<3; ++i){
-            System.out.println(m_CPU.popStack());
+            if (m_CPU.validMemory(m_CPU.getSP() + m_CPU.getBASE())) {
+                System.out.println(m_CPU.popStack());
+            } else {
+                System.out.println("STACK EMPTY");
+                break;
+            }
         }
         syscallExit();
     }
