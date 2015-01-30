@@ -140,14 +140,42 @@ public class SOS implements CPU.TrapHandler
      *----------------------------------------------------------------------
      */
 
-    //TODO <insert header comment here>
+    /**
+     * interruptIllegalMemoryAccess
+     *
+     * Handles Illegal Memory Access interrupts.
+     *
+     * @param addr The address which was attempted to be accessed
+     */
     public void interruptIllegalMemoryAccess(int addr){
+        System.out.println("Error: Illegal Memory Access at addr " + addr);
+        System.out.println("NOW YOU DIE!!!");
+        System.exit(0);
     }
-    //TODO <insert header comment here>
+
+    /**
+     * interruptDivideByZero
+     *
+     * Handles Divide by Zero interrupts.
+     */
     public void interruptDivideByZero(){
+        System.out.println("Error: Divide by Zero");
+        System.out.println("NOW YOU DIE!!!");
+        System.exit(0);
     }
-    //TODO <insert header comment here>
+
+    /**
+     * interruptIllegalInstruction
+     *
+     * Handles Illegal Instruction interrupts.
+     *
+     * @param instr The instruction which caused the interrupt
+     */
     public void interruptIllegalInstruction(int[] instr){
+        System.out.println("Error: Illegal Instruction:");
+        m_CPU.printInstr(instr);
+        System.out.println("NOW YOU DIE!!!");
+        System.exit(0);
     }
     
     /*======================================================================
@@ -155,7 +183,11 @@ public class SOS implements CPU.TrapHandler
      *----------------------------------------------------------------------
      */
     
-    //TODO <insert header comment here>
+    /**
+     * systemCall
+     *
+     * Occurs when TRAP is encountered in child process.
+     */
     public void systemCall()
     {
         //%%%REPLACE THESE LINES WITH APPROPRIATE CODE
