@@ -129,7 +129,7 @@ public class SOS implements CPU.TrapHandler
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
 
-        m_CPU.setSP(m_CPU.getLIM()); //Stack starts at the bottom and grows up.
+        m_CPU.setSP(allocSize); //Stack starts at the bottom and grows up.
 
     }//createProcess
  

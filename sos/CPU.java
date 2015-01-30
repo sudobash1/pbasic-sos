@@ -328,7 +328,7 @@ public class CPU
             m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
         }
         m_RAM.write(m_registers[SP] + m_registers[BASE], value);
-        m_registers[SP]++;
+        m_registers[SP]--;
     }
 
     /**
@@ -343,7 +343,7 @@ public class CPU
             //Stack underflow!
             m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
         }
-        m_registers[SP]--;
+        m_registers[SP]++;
         return m_RAM.read(m_registers[SP] + m_registers[BASE]);
     }
 
