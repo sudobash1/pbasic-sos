@@ -12,7 +12,7 @@ import java.util.*;
  *
  */
    
-public class SOS
+public class SOS implements CPU.TrapHandler
 {
     //======================================================================
     //Member variables
@@ -33,6 +33,16 @@ public class SOS
      * The RAM attached to the CPU.
      **/
     private RAM m_RAM = null;
+
+    //======================================================================
+    //Constants
+    //----------------------------------------------------------------------
+
+    //These constants define the system calls this OS can currently handle
+    public static final int SYSCALL_EXIT     = 0;    /* exit the current program */
+    public static final int SYSCALL_OUTPUT   = 1;    /* outputs a number */
+    public static final int SYSCALL_GETPID   = 2;    /* get current process id */
+    public static final int SYSCALL_COREDUMP = 9;    /* print process state and exit */
 
     /*======================================================================
      * Constructors & Debugging
@@ -120,20 +130,37 @@ public class SOS
 
         m_CPU.setSP(progArray.length);
 
+        m_CPU.registerTrapHandler(this);
+
     }//createProcess
-        
+ 
+
     /*======================================================================
      * Interrupt Handlers
      *----------------------------------------------------------------------
      */
 
-    //None yet!
+    //TODO <insert header comment here>
+    public void interruptIllegalMemoryAccess(int addr){
+    }
+    //TODO <insert header comment here>
+    public void interruptDivideByZero(){
+    }
+    //TODO <insert header comment here>
+    public void interruptIllegalInstruction(int[] instr){
+    }
     
     /*======================================================================
      * System Calls
      *----------------------------------------------------------------------
      */
     
-    //None yet!
-    
+    //TODO <insert header comment here>
+    public void systemCall()
+    {
+        //%%%REPLACE THESE LINES WITH APPROPRIATE CODE
+        System.out.println("TRAP handled!");
+        System.exit(0);
+    }
+
 };//class SOS

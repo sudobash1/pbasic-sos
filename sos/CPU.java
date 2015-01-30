@@ -76,6 +76,31 @@ public class CPU
     private RAM m_RAM = null;
 
     //======================================================================
+    //Callback Interface
+    //----------------------------------------------------------------------
+    /**
+     * TrapHandler
+     *
+     * This interface should be implemented by the operating system to allow the
+     * simulated CPU to generate hardware interrupts and system calls.
+     */
+    public interface TrapHandler
+    {
+        void interruptIllegalMemoryAccess(int addr);
+        void interruptDivideByZero();
+        void interruptIllegalInstruction(int[] instr);
+        void systemCall();
+    };//interface TrapHandler
+
+    
+    /**
+     * a reference to the trap handler for this CPU.  On a real CPU this would
+     * simply be an address that the PC register is set to.
+     */
+    private TrapHandler m_TH = null;
+
+
+    //======================================================================
     //Methods
     //----------------------------------------------------------------------
 
@@ -93,7 +118,17 @@ public class CPU
         }
         m_RAM = ram;
 
-    }//CPU ctor
+    }//CPU ctor 
+
+    /**
+     * registerTrapHandler
+     *
+     * allows SOS to register itself as the trap handler 
+     */
+    public void registerTrapHandler(TrapHandler th)
+    {
+        m_TH = th;
+    }
 
     /**
      * getPC
@@ -264,6 +299,7 @@ public class CPU
 
     }//printInstr
 
+
     /**
      * validMemory
      *
@@ -385,8 +421,9 @@ public class CPU
                     }
                     m_RAM.write(addr, m_registers[instr[1]]);
                     break;
-                case TRAP: // Trap is not yet supported. Break out of run.
-                    return;
+                case TRAP:
+                    m_TH.systemCall();
+                    break;
                 default: // This is bad. Why did this happen to me?
                     System.out.println("ERROR: unsupported opcode: " +
                                         instr[0]);
