@@ -1,11 +1,7 @@
 SET R1 0
 SET R2 1
-SET R3 1
 
-ADD R4 R0 R2
-ADD R4 R4 R4
-ADD R4 R4 R4
-
-DIV R4 R4 R1
+# 1 / 0 should interrupt
+DIV R4 R2 R1
 
 SET R0 1
