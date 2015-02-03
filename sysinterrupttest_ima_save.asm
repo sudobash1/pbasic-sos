@@ -1,6 +1,6 @@
-# tests system interrupt calls on invalid memory address
-:start
+# tests system interrupt for saving outside of memory
 SET R1 0
-SET R3 400
-SAVE R3 R1
-BRANCH start
+
+# -1 (relative) is outside the valid memory ranges .
+SET R3 -1
+SAVE R1 R3

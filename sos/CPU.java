@@ -339,11 +339,11 @@ public class CPU
      * @return The value poped from the stack.
      */
     public int popStack() {
+        m_registers[SP]++;
         if (!validMemory(m_registers[SP] + m_registers[BASE])) {
             //Stack underflow!
             m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
         }
-        m_registers[SP]++;
         return m_RAM.read(m_registers[SP] + m_registers[BASE]);
     }
 

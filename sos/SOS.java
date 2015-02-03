@@ -223,11 +223,10 @@ public class SOS implements CPU.TrapHandler
 
         System.out.println("Top three stack items:");
         for (int i=0; i<3; ++i){
-            if (m_CPU.validMemory(m_CPU.getSP() + m_CPU.getBASE())) {
+            if (m_CPU.validMemory(m_CPU.getSP() + 1 + m_CPU.getBASE())) {
                 System.out.println(m_CPU.popStack());
             } else {
-                System.out.println("STACK EMPTY");
-                break;
+                System.out.println(" -- NULL -- ");
             }
         }
         syscallExit();

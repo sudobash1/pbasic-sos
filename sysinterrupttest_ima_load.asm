@@ -1,5 +1,5 @@
 # 400 (relative) is outside the valid memory ranges 
-# for our test program which sets the 'malloc' to
+# for our test program which sets the alloc size to
 # 300 memory spaces
 SET R0 400
 
