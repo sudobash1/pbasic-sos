@@ -28,6 +28,7 @@ public class Sim
      *
      *
      */
+    /*
     public static void runSimple()
     {
         //Create the simulated hardware and OS
@@ -51,6 +52,7 @@ public class Sim
         cpu.run();
         
     }//runSimple
+    */
 
     /**
      * runIO
@@ -93,8 +95,7 @@ public class Sim
      */
     public static void main(String[] args)
     {
-        runSimple();  //%%%You will eventually replace this with a call to runIO(); 
-        
+        runIO();
         System.out.println("END OF SIMULATION");
 
         System.exit(0);         // Success
