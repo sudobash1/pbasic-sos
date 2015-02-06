@@ -58,6 +58,14 @@ public class SOS implements CPU.TrapHandler
     public static final int SYSCALL_WRITE   = 6;    /* send output to device */
     public static final int SYSCALL_COREDUMP = 9;    /* print process state and exit */
 
+    //Return codes for syscalls
+    public static final int SYSCALL_RET_SUCCESS = 0;    /* no problem */
+    public static final int SYSCALL_RET_DNE = 1;    /* device doesn't exist */
+    public static final int SYSCALL_RET_NOT_SHARE = 2;    /* device is not sharable */
+    public static final int SYSCALL_RET_ALREADY_OPEN = 3;    /* device is already open */
+    public static final int SYSCALL_RET_NOT_OPEN = 4;    /* device is not yet open */
+    public static final int SYSCALL_RET_RO = 5;    /* device is read only */
+    public static final int SYSCALL_RET_WO = 6;    /* device is write only */
 
     /*======================================================================
      * Constructors & Debugging
@@ -235,13 +243,24 @@ public class SOS implements CPU.TrapHandler
      */
     private void syscallOpen() {
         int devNum = m_CPU.popStack();
-        if (devNum >= m_devices.size() ||
-            m_devices.get(devNum).containsProcess(m_currProcess))
-        {
-            //TODO error
+        DeviceInfo devInfo = getDeviceInfo(devNum);
+
+        if (devInfo == null) {
+            m_CPU.pushStack(SYSCALL_RET_DNE);
+            return;
         }
+        if (devInfo.containsProcess(m_currProcess)) {
+            m_CPU.pushStack(SYSCALL_RET_ALREADY_OPEN);
+            return;
+        }
+        if (! devInfo.device.isSharable()) {
+            m_CPU.pushStack(SYSCALL_RET_NOT_SHARE);
+            return;
+        }
+
         //Associate the process with this device.
-        m_devices.get(devNum).addProcess(m_currProcess);
+        devInfo.addProcess(m_currProcess);
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
     }
 
     /**
@@ -251,14 +270,19 @@ public class SOS implements CPU.TrapHandler
      */
     private void syscallClose() {
         int devNum = m_CPU.popStack();
+        DeviceInfo devInfo = getDeviceInfo(devNum);
 
-        if (devNum >= m_devices.size() || 
-            ! m_devices.get(devNum).containsProcess(m_currProcess) )
-        {
-            //TODO error
+        if (devInfo == null) {
+            m_CPU.pushStack(SYSCALL_RET_DNE);
+            return;
+        }
+        if (! devInfo.containsProcess(m_currProcess) ) {
+            m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
+            return;
         }
         //De-associate the process with this device.
-        m_devices.get(devNum).removeProcess(m_currProcess);
+        devInfo.removeProcess(m_currProcess);
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
     }
 
     /**
@@ -269,16 +293,25 @@ public class SOS implements CPU.TrapHandler
     private void syscallRead() {
         int addr = m_CPU.popStack();
         int devNum = m_CPU.popStack();
+        DeviceInfo devInfo = getDeviceInfo(devNum);
 
-        if (devNum >= m_devices.size() || 
-            ! m_devices.get(devNum).containsProcess(m_currProcess) ||
-            )
-        {
-            //TODO error
+        if (devInfo == null) {
+            m_CPU.pushStack(SYSCALL_RET_DNE);
+            return;
         }
+        if (! devInfo.containsProcess(m_currProcess) ) {
+            m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
+            return;
+        }
+        if (! devInfo.device.isReadable() ) {
+            m_CPU.pushStack(SYSCALL_RET_WO);
+            return;
+        }
+
         //Read from the device
-        int value = m_devices.get(devNum).read(addr);
+        int value = devInfo.getDevice().read(addr);
         m_CPU.pushStack(value);
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
     }
 
     /**
@@ -290,15 +323,24 @@ public class SOS implements CPU.TrapHandler
         int value = m_CPU.popStack();
         int addr = m_CPU.popStack();
         int devNum = m_CPU.popStack();
+        DeviceInfo devInfo = getDeviceInfo(devNum);
 
-        if (devNum >= m_devices.size() || 
-            ! m_devices.get(devNum).containsProcess(m_currProcess) ||
-            )
-        {
-            //TODO error
+        if (devInfo == null) {
+            m_CPU.pushStack(SYSCALL_RET_DNE);
+            return;
         }
+        if (! devInfo.containsProcess(m_currProcess) ) {
+            m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
+            return;
+        }
+        if (! devInfo.device.isWriteable() ) {
+            m_CPU.pushStack(SYSCALL_RET_RO);
+            return;
+        }
+
         //Write to the device
-        m_devices.get(devNum).write(addr, value);
+        devInfo.getDevice().write(addr, value);
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
     }
 
     /**
@@ -330,7 +372,9 @@ public class SOS implements CPU.TrapHandler
      */
     public void systemCall()
     {
-        switch (m_CPU.popStack()) {
+        int syscallNum = m_CPU.popStack();
+
+        switch (syscallNum) {
             case SYSCALL_EXIT:
                 syscallExit();
                 break;
@@ -484,5 +528,27 @@ public class SOS implements CPU.TrapHandler
     {
         m_devices.add(new DeviceInfo(dev, id));
     } //registerDevice
+
+    /**
+     * getDeviceInfo
+     *
+     * gets a device info by id.
+     *
+     * @param id      the id of the device
+     * @return        the device info instance if it exists, else null
+     * 
+     */
+    private DeviceInfo getDeviceInfo(int id) {
+        Iterator<DeviceInfo> i = m_devices.iterator();
+
+        while(i.hasNext()) {
+           DeviceInfo devInfo = i.next();
+           if (devInfo.getId() == id) {
+               return devInfo;
+           }
+        }
+
+        return null;
+    }
 
 };//class SOS

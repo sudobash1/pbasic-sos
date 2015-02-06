@@ -290,7 +290,7 @@ public class CPU
                     System.out.println("SAVE R" + instr[1] + " --> @R" + instr[2]);
                     break;
                 case TRAP:
-                    System.out.print("TRAP ");
+                    System.out.println("TRAP");
                     break;
                 default:        // should never be reached
                     System.out.println("?? ");
