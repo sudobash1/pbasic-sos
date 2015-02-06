@@ -234,6 +234,14 @@ public class SOS implements CPU.TrapHandler
      * Open a device.
      */
     private void syscallOpen() {
+        int devNum = m_CPU.popStack();
+        if (devNum >= m_devices.size() ||
+            m_devices.get(devNum).containsProcess(m_currProcess))
+        {
+            //TODO error
+        }
+        //Associate the process with this device.
+        m_devices.get(devNum).addProcess(m_currProcess);
     }
 
     /**
@@ -242,6 +250,15 @@ public class SOS implements CPU.TrapHandler
      * Close a device.
      */
     private void syscallClose() {
+        int devNum = m_CPU.popStack();
+
+        if (devNum >= m_devices.size() || 
+            ! m_devices.get(devNum).containsProcess(m_currProcess) )
+        {
+            //TODO error
+        }
+        //De-associate the process with this device.
+        m_devices.get(devNum).removeProcess(m_currProcess);
     }
 
     /**
@@ -250,6 +267,18 @@ public class SOS implements CPU.TrapHandler
      * Read from an open device.
      */
     private void syscallRead() {
+        int addr = m_CPU.popStack();
+        int devNum = m_CPU.popStack();
+
+        if (devNum >= m_devices.size() || 
+            ! m_devices.get(devNum).containsProcess(m_currProcess) ||
+            )
+        {
+            //TODO error
+        }
+        //Read from the device
+        int value = m_devices.get(devNum).read(addr);
+        m_CPU.pushStack(value);
     }
 
     /**
@@ -258,6 +287,18 @@ public class SOS implements CPU.TrapHandler
      * Write to an open device.
      */
     private void syscallWrite() {
+        int value = m_CPU.popStack();
+        int addr = m_CPU.popStack();
+        int devNum = m_CPU.popStack();
+
+        if (devNum >= m_devices.size() || 
+            ! m_devices.get(devNum).containsProcess(m_currProcess) ||
+            )
+        {
+            //TODO error
+        }
+        //Write to the device
+        m_devices.get(devNum).write(addr, value);
     }
 
     /**
