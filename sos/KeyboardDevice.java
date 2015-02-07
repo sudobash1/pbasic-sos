@@ -5,6 +5,8 @@ import java.util.*;
 /**
  * This class simulates a simple, sharable read-only device.  
  *
+ * Authors include: Stephen Robinson, Connor Haas
+ *
  * @see Sim
  * @see CPU
  * @see SOS

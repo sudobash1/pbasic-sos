@@ -7,7 +7,7 @@ import java.util.*;
  * microcomputer.  This includes a processor chip, RAM and I/O devices.  It is
  * designed to demonstrate a simulated operating system (SOS).
  *
- * Authors include: Stephen Robinson and Camden McKone
+ * Authors include: Stephen Robinson, Camden McKone, Nathan Brown, Connor Haas
  *
  * @see RAM
  * @see SOS
@@ -61,7 +61,7 @@ public class CPU
     /**
      * specifies whether the CPU should output details of its work
      **/
-    private boolean m_verbose = false;
+    private boolean m_verbose = true;
 
     /**
      * This array contains all the registers on the "chip".

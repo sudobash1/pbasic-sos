@@ -28,7 +28,6 @@ public class Sim
      *
      *
      */
-    /*
     public static void runSimple()
     {
         //Create the simulated hardware and OS
@@ -52,7 +51,6 @@ public class Sim
         cpu.run();
         
     }//runSimple
-    */
 
     /**
      * runIO
@@ -76,7 +74,7 @@ public class Sim
 
         //Load the program into RAM
         Program prog = new Program();
-        if (prog.load("readwrite.asm", false) != 0)
+        if (prog.load("checkerror.asm", false) != 0)
         {
             //Error loading program so exit
             return;
