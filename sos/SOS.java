@@ -253,7 +253,7 @@ public class SOS implements CPU.TrapHandler
             m_CPU.pushStack(SYSCALL_RET_ALREADY_OPEN);
             return;
         }
-        if (! devInfo.device.isSharable()) {
+        if (! devInfo.device.isSharable() && ! devInfo.unused()) {
             m_CPU.pushStack(SYSCALL_RET_NOT_SHARE);
             return;
         }
