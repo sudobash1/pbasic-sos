@@ -177,6 +177,37 @@ public class SOS implements CPU.TrapHandler
     }//removeCurrentProcess
 
     /**
+     * selectBlockedProcess
+     *
+     * select a process to unblock that might be waiting to perform a given
+     * action on a given device.  This is a helper method for system calls
+     * and interrupts that deal with devices.
+     *
+     * @param dev   the Device that the process must be waiting for
+     * @param op    the operation that the process wants to perform on the
+     *              device.  Use the SYSCALL constants for this value.
+     * @param addr  the address the process is reading from.  If the
+     *              operation is a Write or Open then this value can be
+     *              anything
+     *
+     * @return the process to unblock -OR- null if none match the given criteria
+     */
+    public ProcessControlBlock selectBlockedProcess(Device dev, int op, int addr)
+    {
+        ProcessControlBlock selected = null;
+        for(ProcessControlBlock pi : m_processes)
+        {
+            if (pi.isBlockedForDevice(dev, op, addr))
+            {
+                selected = pi;
+                break;
+            }
+        }//for
+
+        return selected;
+    }//selectBlockedProcess
+
+    /**
      * getRandomProcess
      *
      * selects a non-Blocked process at random from the ProcessTable.
@@ -204,6 +235,8 @@ public class SOS implements CPU.TrapHandler
     }//getRandomProcess
     
     /**
+     * scheduleNewProcess
+     *
      * Selects a new non-blocked process to run and replaces the old running process.
      */
     public void scheduleNewProcess()
@@ -558,46 +591,16 @@ public class SOS implements CPU.TrapHandler
 
 
     
-    //<method header needed>
+    /**
+     * syscallYield
+     *
+     * Allow process to voluntarily move from Running to Ready.
+     */
     private void syscallYield()
     {
-        //%%%You will implement this method
+        scheduleNewProcess();
     }//syscallYield
 
-
-
-    
-    /**
-     * selectBlockedProcess
-     *
-     * select a process to unblock that might be waiting to perform a given
-     * action on a given device.  This is a helper method for system calls
-     * and interrupts that deal with devices.
-     *
-     * @param dev   the Device that the process must be waiting for
-     * @param op    the operation that the process wants to perform on the
-     *              device.  Use the SYSCALL constants for this value.
-     * @param addr  the address the process is reading from.  If the
-     *              operation is a Write or Open then this value can be
-     *              anything
-     *
-     * @return the process to unblock -OR- null if none match the given criteria
-     */
-    public ProcessControlBlock selectBlockedProcess(Device dev, int op, int addr)
-    {
-        ProcessControlBlock selected = null;
-        for(ProcessControlBlock pi : m_processes)
-        {
-            if (pi.isBlockedForDevice(dev, op, addr))
-            {
-                selected = pi;
-                break;
-            }
-        }//for
-
-        return selected;
-    }//selectBlockedProcess
-    
     
     /**
      * systemCall
@@ -629,6 +632,12 @@ public class SOS implements CPU.TrapHandler
                 break;
             case SYSCALL_WRITE:
                 syscallWrite();
+                break;
+            case SYSCALL_EXEC:
+                syscallExec();
+                break;
+            case SYSCALL_YIELD:
+                syscallYield();
                 break;
             case SYSCALL_COREDUMP:
                 syscallCoreDump();
