@@ -33,6 +33,26 @@ public class SOS implements CPU.TrapHandler
      * A Vector of DeviceInfo objects
      **/
     private Vector<DeviceInfo> m_devices = null;
+
+    /**
+     * A Vector of all the Program objects that are available to the operating system.
+     **/
+    Vector<Program> m_programs = null;
+
+    /**
+     * The position where the next program will be loaded.
+     **/
+    int m_nextLoadPos = 0;
+
+    /**
+     * The ID which will be assigned to the next process that is loaded
+     **/
+    int m_nextProcessID = 1001;
+
+    /**
+     * List of all processes currently loaded into RAM and in one of the major states
+     **/
+    Vector<ProcessControlBlock> m_processes = null;
     
     /**
      * The CPU the operating system is managing.
@@ -84,8 +104,9 @@ public class SOS implements CPU.TrapHandler
         m_CPU.registerTrapHandler(this);
         m_RAM = r;
 
-        m_currProcess = new ProcessControlBlock(42);
         m_devices = new Vector<DeviceInfo>();
+        m_programs = new Vector<Program>();
+        m_processes = new Vector<ProcessControlBlock>();
     }//SOS ctor
     
     /**
