@@ -391,7 +391,7 @@ public class SOS implements CPU.TrapHandler
      * Exits from the current process.
      */
     private void syscallExit() {
-        debugPrintln("Removing proc " + m_currProcess.getProcessId() + " from RAM.")
+        debugPrintln("Removing proc " + m_currProcess.getProcessId() + " from RAM.");
         removeCurrentProcess();
     }
 
@@ -465,7 +465,7 @@ public class SOS implements CPU.TrapHandler
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
 
         //Unblock next proc which wants to open this device
-        ProcessControlBlock proc = selectBlockedProcess(devInfo.getDevice());
+        ProcessControlBlock proc = selectBlockedProcess(devInfo.getDevice(), SYSCALL_OPEN, -1);
         if (proc != null) { 
             proc.unblock();
         }
