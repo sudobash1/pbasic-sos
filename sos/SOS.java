@@ -168,10 +168,12 @@ public class SOS implements CPU.TrapHandler
 
     }//printProcessTable
 
-    //<method header needed>
+    //<method header needed> TODO
     public void removeCurrentProcess()
     {
-        //%%%You will implement this method
+        m_processes.remove(m_currProcess);
+        m_currProcess = null;
+        scheduleNewProcess();
     }//removeCurrentProcess
 
     /**
