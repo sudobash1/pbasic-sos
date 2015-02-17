@@ -201,11 +201,29 @@ public class SOS implements CPU.TrapHandler
         return null;        // no processes are Ready
     }//getRandomProcess
     
-    //<method header needed>
+    /**
+     * Selects a new non-blocked process to run and replaces the old running process.
+     */
     public void scheduleNewProcess()
     {
-        //%%%You will implement this method
+        if (m_processes.size() == 0) {
+            System.exit(0);
+        }
 
+        ProcessControlBlock proc = getRandomProcess();
+
+        if (proc == null) {
+            return;
+        }
+
+        //Save the CPU registers
+        if (m_currProcess != null) {
+            m_currProcess.save(m_CPU);
+        }
+
+        //Set this process as the new current process
+        m_currProcess = proc;
+        m_currProcess.restore(m_CPU);
     }//scheduleNewProcess
 
     /**
