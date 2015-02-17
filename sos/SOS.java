@@ -239,18 +239,35 @@ public class SOS implements CPU.TrapHandler
      */
     public void createProcess(Program prog, int allocSize)
     {
-        final int base = 4; //This is just an arbitrary base, hardcoded for now
-        m_CPU.setBASE(base);
-        m_CPU.setLIM(base + allocSize);
-        m_CPU.setPC(0); //We are going to use a logical (not physical) PC
 
+        int base = m_nextLoadPos;
+        int lim = base + allocSize;
+
+        if (lim >= m_RAM.getSize()) {
+            System.out.println("Error: Out of memory for new process!");
+            System.exit(0);
+        }
+
+        if (m_currProcess != null) {
+            m_currProcess.save(m_CPU);
+        }
+
+        m_CPU.setBASE(base);
+        m_CPU.setLIM(lim);
+        m_CPU.setPC(0); //We are going to use a logical (not physical) PC
+        m_CPU.setSP(allocSize); //Stack starts at the bottom and grows up.
+                                //The Stack is also logical
+
+        ProcessControlBlock proc = new ProcessControlBlock(m_nextProcessID++);
+        m_processes.add(proc);
+        proc.save(m_CPU);
+
+        //Write the program code to memory
         int[] progArray = prog.export();
 
         for (int progAddr=0; progAddr<progArray.length; ++progAddr ){
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
-
-        m_CPU.setSP(allocSize); //Stack starts at the bottom and grows up.
 
     }//createProcess
  
