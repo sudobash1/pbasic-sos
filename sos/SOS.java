@@ -22,7 +22,7 @@ public class SOS implements CPU.TrapHandler
      * This flag causes the SOS to print lots of potentially helpful
      * status messages
      **/
-    public static final boolean m_verbose = false;
+    public static final boolean m_verbose = true;
 
     /**
      * The ProcessControlBlock of the current process
@@ -168,7 +168,12 @@ public class SOS implements CPU.TrapHandler
 
     }//printProcessTable
 
-    //<method header needed> TODO
+    /**
+     * removeCurrentProcess
+     *
+     * Removes the currently running process from the list of all processes.
+     * Schedules a new process.
+     */
     public void removeCurrentProcess()
     {
         m_processes.remove(m_currProcess);
@@ -259,6 +264,8 @@ public class SOS implements CPU.TrapHandler
         //Set this process as the new current process
         m_currProcess = proc;
         m_currProcess.restore(m_CPU);
+
+        debugPrintln("Moved proc " + m_currProcess.getProcessId() + " from READY to RUNNING.");
     }//scheduleNewProcess
 
     /**
@@ -293,15 +300,18 @@ public class SOS implements CPU.TrapHandler
     public void createProcess(Program prog, int allocSize)
     {
 
+        debugPrintln("Attempting to create new proc.");
+
         int base = m_nextLoadPos;
         int lim = base + allocSize;
 
         if (lim >= m_RAM.getSize()) {
-            System.out.println("Error: Out of memory for new process!");
+            debugPrintln("Error: Out of memory for new process!");
             System.exit(0);
         }
 
         if (m_currProcess != null) {
+            debugPrintln("Moving proc " + m_currProcess.getProcessId() + " from RUNNING to READY.");
             m_currProcess.save(m_CPU);
         }
 
@@ -321,6 +331,8 @@ public class SOS implements CPU.TrapHandler
         for (int progAddr=0; progAddr<progArray.length; ++progAddr ){
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
+
+        debugPrintln("Successfully created new proc with ID " + proc.getProcessId());
 
     }//createProcess
  
@@ -379,7 +391,8 @@ public class SOS implements CPU.TrapHandler
      * Exits from the current process.
      */
     private void syscallExit() {
-        System.exit(0);
+        debugPrintln("Removing proc " + m_currProcess.getProcessId() + " from RAM.")
+        removeCurrentProcess();
     }
 
     /**
@@ -397,8 +410,7 @@ public class SOS implements CPU.TrapHandler
      * Pushes the PID to the stack.
      */
     private void syscallGetPID() {
-        final int pid = 42; //just for now we will use a constant pid.
-        m_CPU.pushStack(pid);
+        m_CPU.pushStack(m_currProcess.getProcessId());
     }
 
     /**
@@ -419,7 +431,9 @@ public class SOS implements CPU.TrapHandler
             return;
         }
         if (! devInfo.device.isSharable() && ! devInfo.unused()) {
-            m_CPU.pushStack(SYSCALL_RET_NOT_SHARE);
+            //addr = -1 because this is not a read
+            m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_OPEN, -1);
+            scheduleNewProcess();
             return;
         }
 
@@ -445,9 +459,16 @@ public class SOS implements CPU.TrapHandler
             m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
             return;
         }
+
         //De-associate the process with this device.
         devInfo.removeProcess(m_currProcess);
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
+
+        //Unblock next proc which wants to open this device
+        ProcessControlBlock proc = selectBlockedProcess(devInfo.getDevice());
+        if (proc != null) { 
+            proc.unblock();
+        }
     }
 
     /**
