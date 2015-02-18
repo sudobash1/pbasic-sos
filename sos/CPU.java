@@ -7,7 +7,11 @@ import java.util.*;
  * microcomputer.  This includes a processor chip, RAM and I/O devices.  It is
  * designed to demonstrate a simulated operating system (SOS).
  *
- * Authors include: Stephen Robinson, Camden McKone, Nathan Brown, Connor Haas
+ * File History:
+ * HW 1 Stephen Robinson and Camden McKone,
+ * HW 2 Stephen Robinson and Nathan Brown
+ * HW 3 Stephen Robinson and Connor Haas
+ * HW 4 --Unchanged--
  *
  * @see RAM
  * @see SOS

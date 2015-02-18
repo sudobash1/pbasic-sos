@@ -8,8 +8,11 @@ import java.util.*;
  * the real-world processor in order to allow a focus on the essentials of
  * operating system design using a high level programming language.
  *
- * Authors include: Stephen Robinson, Camden McKone, Nathan Brown, Connor Haas
- *
+ * File History:
+ * HW 1 Stephen Robinson and Camden McKone,
+ * HW 2 Stephen Robinson and Nathan Brown
+ * HW 3 Stephen Robinson and Connor Haas
+ * HW 4 Stephen Robinson and Jordan White
  */
    
 public class SOS implements CPU.TrapHandler
