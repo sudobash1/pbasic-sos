@@ -30,6 +30,11 @@ public class SOS implements CPU.TrapHandler
     private ProcessControlBlock m_currProcess = null;
 
     /**
+     * List of all processes currently loaded into RAM and in one of the major states
+     **/
+    Vector<ProcessControlBlock> m_processes = null;
+
+    /**
      * A Vector of DeviceInfo objects
      **/
     private Vector<DeviceInfo> m_devices = null;
@@ -42,17 +47,12 @@ public class SOS implements CPU.TrapHandler
     /**
      * The position where the next program will be loaded.
      **/
-    int m_nextLoadPos = 0;
+    private int m_nextLoadPos = 0;
 
     /**
      * The ID which will be assigned to the next process that is loaded
      **/
-    int m_nextProcessID = 1001;
-
-    /**
-     * List of all processes currently loaded into RAM and in one of the major states
-     **/
-    Vector<ProcessControlBlock> m_processes = null;
+    private int m_nextProcessID = 1001;
     
     /**
      * The CPU the operating system is managing.
@@ -253,6 +253,7 @@ public class SOS implements CPU.TrapHandler
         ProcessControlBlock proc = getRandomProcess();
 
         if (proc == null) {
+            debugPrintln("We got a null for scheduleNewProcess");
             return;
         }
 
@@ -310,6 +311,9 @@ public class SOS implements CPU.TrapHandler
             System.exit(0);
         }
 
+        m_nextLoadPos = lim + 1;
+        debugPrintln("Next proc will be at " + m_nextLoadPos);
+
         if (m_currProcess != null) {
             debugPrintln("Moving proc " + m_currProcess.getProcessId() + " from RUNNING to READY.");
             m_currProcess.save(m_CPU);
@@ -321,9 +325,9 @@ public class SOS implements CPU.TrapHandler
         m_CPU.setSP(allocSize); //Stack starts at the bottom and grows up.
                                 //The Stack is also logical
 
-        ProcessControlBlock proc = new ProcessControlBlock(m_nextProcessID++);
-        m_processes.add(proc);
-        proc.save(m_CPU);
+        m_currProcess = new ProcessControlBlock(m_nextProcessID++);
+        m_processes.add(m_currProcess);
+        m_currProcess.save(m_CPU);
 
         //Write the program code to memory
         int[] progArray = prog.export();
@@ -332,8 +336,7 @@ public class SOS implements CPU.TrapHandler
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
 
-        debugPrintln("Successfully created new proc with ID " + proc.getProcessId());
-
+        debugPrintln("Successfully created new proc: " + m_currProcess);
     }//createProcess
  
 
