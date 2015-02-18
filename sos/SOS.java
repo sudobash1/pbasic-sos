@@ -199,8 +199,10 @@ public class SOS implements CPU.TrapHandler
      */
     public ProcessControlBlock selectBlockedProcess(Device dev, int op, int addr)
     {
+        DeviceInfo devInfo = getDeviceInfo(dev.getId());
         ProcessControlBlock selected = null;
-        for(ProcessControlBlock pi : m_processes)
+
+        for(ProcessControlBlock pi : devInfo.getPCBs())
         {
             if (pi.isBlockedForDevice(dev, op, addr))
             {
@@ -210,6 +212,7 @@ public class SOS implements CPU.TrapHandler
         }//for
 
         return selected;
+        
     }//selectBlockedProcess
 
     /**
@@ -254,6 +257,10 @@ public class SOS implements CPU.TrapHandler
 
         if (proc == null) {
             debugPrintln("We got a null for scheduleNewProcess");
+            return;
+        }
+
+        if (proc == m_currProcess) {
             return;
         }
 
@@ -312,7 +319,6 @@ public class SOS implements CPU.TrapHandler
         }
 
         m_nextLoadPos = lim + 1;
-        debugPrintln("Next proc will be at " + m_nextLoadPos);
 
         if (m_currProcess != null) {
             debugPrintln("Moving proc " + m_currProcess.getProcessId() + " from RUNNING to READY.");
@@ -335,8 +341,6 @@ public class SOS implements CPU.TrapHandler
         for (int progAddr=0; progAddr<progArray.length; ++progAddr ){
             m_RAM.write(base + progAddr, progArray[progAddr]);
         }
-
-        debugPrintln("Successfully created new proc: " + m_currProcess);
     }//createProcess
  
 
@@ -434,12 +438,18 @@ public class SOS implements CPU.TrapHandler
             return;
         }
         if (! devInfo.device.isSharable() && ! devInfo.unused()) {
+    
+            debugPrintln("Blocking proc " + m_currProcess);
+
             //addr = -1 because this is not a read
             m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_OPEN, -1);
+            devInfo.addProcess(m_currProcess);
+            m_CPU.pushStack(SYSCALL_RET_SUCCESS);
             scheduleNewProcess();
             return;
         }
-
+    
+        debugPrintln("Opened dev from proc:" + m_currProcess);
         //Associate the process with this device.
         devInfo.addProcess(m_currProcess);
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
@@ -463,6 +473,7 @@ public class SOS implements CPU.TrapHandler
             return;
         }
 
+        debugPrintln("Closed dev from proc:" + m_currProcess);
         //De-associate the process with this device.
         devInfo.removeProcess(m_currProcess);
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
@@ -470,6 +481,7 @@ public class SOS implements CPU.TrapHandler
         //Unblock next proc which wants to open this device
         ProcessControlBlock proc = selectBlockedProcess(devInfo.getDevice(), SYSCALL_OPEN, -1);
         if (proc != null) { 
+            debugPrintln("Un-Blocking proc " + proc);
             proc.unblock();
         }
     }
@@ -954,6 +966,11 @@ public class SOS implements CPU.TrapHandler
         {
             return procs.contains(pi);
         }
+
+        /** @return a vector of ProcessControlBlocks which have the device open (or are blocked for it.) */
+        public Vector<ProcessControlBlock> getPCBs() {
+            return procs;
+        }
         
         /** Is this device currently not opened by any process? */
         public boolean unused()
@@ -966,7 +983,7 @@ public class SOS implements CPU.TrapHandler
     
     /*======================================================================
      * Device Management Methods
-     *----------------------------------------------------------------------
+     *-------------------------------------d---------------------------------
      */
 
     /**
