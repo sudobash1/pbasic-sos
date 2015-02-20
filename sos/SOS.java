@@ -92,6 +92,9 @@ public class SOS implements CPU.TrapHandler
     public static final int SYSCALL_RET_RO = 5;    /* device is read only */
     public static final int SYSCALL_RET_WO = 6;    /* device is write only */
 
+    /**This process is used as the idle process' id*/
+    public static final int IDLE_PROC_ID    = 999;  
+
     /*======================================================================
      * Constructors & Debugging
      *----------------------------------------------------------------------
@@ -152,6 +155,49 @@ public class SOS implements CPU.TrapHandler
      * Process Management Methods
      *----------------------------------------------------------------------
      */
+
+    /**
+     * createIdleProcess
+     *
+     * creates a one instruction process that immediately exits.  This is used
+     * to buy time until device I/O completes and unblocks a legitimate
+     * process.
+     *
+     */
+    public void createIdleProcess()
+    {
+        int progArr[] = { 0, 0, 0, 0,   //SET r0=0
+                          0, 0, 0, 0,   //SET r0=0 (repeated instruction to account for vagaries in student implementation of the CPU class)
+                         10, 0, 0, 0,   //PUSH r0
+                         15, 0, 0, 0 }; //TRAP
+
+        //Initialize the starting position for this program
+        int baseAddr = m_nextLoadPos;
+
+        //Load the program into RAM
+        for(int i = 0; i < progArr.length; i++)
+        {
+            m_RAM.write(baseAddr + i, progArr[i]);
+        }
+
+        //Save the register info from the current process (if there is one)
+        if (m_currProcess != null)
+        {
+            m_currProcess.save(m_CPU);
+        }
+        
+        //Set the appropriate registers
+        m_CPU.setPC(baseAddr);
+        m_CPU.setSP(baseAddr + progArr.length + 10);
+        m_CPU.setBASE(baseAddr);
+        m_CPU.setLIM(baseAddr + progArr.length + 20);
+
+        //Save the relevant info as a new entry in m_processes
+        m_currProcess = new ProcessControlBlock(IDLE_PROC_ID);  
+        m_processes.add(m_currProcess);
+
+    }//createIdleProcess
+     
 
     /**
      * printProcessTable      **DEBUGGING**
@@ -780,6 +826,115 @@ public class SOS implements CPU.TrapHandler
         }//restore
          
         /**
+         * getRegisterValue
+         *
+         * Retrieves the value of a process' register that is stored in this
+         * object (this.registers).
+         * 
+         * @param idx the index of the register to retrieve.  Use the constants
+         *            in the CPU class
+         * @return one of the register values stored in in this object or -999
+         *         if an invalid index is given 
+         */
+        public int getRegisterValue(int idx)
+        {
+            if ((idx < 0) || (idx >= CPU.NUMREG))
+            {
+                return -999;    // invalid index
+            }
+            
+            return this.registers[idx];
+        }//getRegisterValue
+         
+        /**
+         * setRegisterValue
+         *
+         * Sets the value of a process' register that is stored in this
+         * object (this.registers).  
+         * 
+         * @param idx the index of the register to set.  Use the constants
+         *            in the CPU class.  If an invalid index is given, this
+         *            method does nothing.
+         * @param val the value to set the register to
+         */
+        public void setRegisterValue(int idx, int val)
+        {
+            if ((idx < 0) || (idx >= CPU.NUMREG))
+            {
+                return;    // invalid index
+            }
+            
+            this.registers[idx] = val;
+        }//setRegisterValue
+         
+    
+
+        /**
+         * toString       **DEBUGGING**
+         *
+         * @return a string representation of this class
+         */
+        public String toString()
+        {
+            String result = "Process id " + processId + " ";
+            if (isBlocked())
+            {
+                result = result + "is BLOCKED for ";
+                if (blockedForOperation == SYSCALL_OPEN)
+                {
+                    result = result + "OPEN";
+                }
+                else if (blockedForOperation == SYSCALL_READ)
+                {
+                    result = result + "READ @" + blockedForAddr;
+                }
+                else if (blockedForOperation == SYSCALL_WRITE)
+                {
+                    result = result + "WRITE @" + blockedForAddr;
+                }
+                else  
+                {
+                    result = result + "unknown reason!";
+                }
+                for(DeviceInfo di : m_devices)
+                {
+                    if (di.getDevice() == blockedForDevice)
+                    {
+                        result = result + " on device #" + di.getId();
+                        break;
+                    }
+                }
+                result = result + ": ";
+            }
+            else if (this == m_currProcess)
+            {
+                result = result + "is RUNNING: ";
+            }
+            else
+            {
+                result = result + "is READY: ";
+            }
+
+            if (registers == null)
+            {
+                result = result + "<never saved>";
+                return result;
+            }
+            
+            for(int i = 0; i < CPU.NUMGENREG; i++)
+            {
+                result = result + ("r" + i + "=" + registers[i] + " ");
+            }//for
+            result = result + ("PC=" + registers[CPU.PC] + " ");
+            result = result + ("SP=" + registers[CPU.SP] + " ");
+            result = result + ("BASE=" + registers[CPU.BASE] + " ");
+            result = result + ("LIM=" + registers[CPU.LIM] + " ");
+
+            return result;
+        }//toString
+         
+
+        /**
          * block
          *
          * blocks the current process to wait for I/O.  The caller is
@@ -856,45 +1011,6 @@ public class SOS implements CPU.TrapHandler
 
             return false;
         }//isBlockedForDevice
-         
-        /**
-         * toString       **DEBUGGING**
-         *
-         * @return a string representation of this class
-         */
-        public String toString()
-        {
-            String result = "Process id " + processId + " ";
-            if (isBlocked())
-            {
-                result = result + "is BLOCKED: ";
-            }
-            else if (this == m_currProcess)
-            {
-                result = result + "is RUNNING: ";
-            }
-            else
-            {
-                result = result + "is READY: ";
-            }
-
-            if (registers == null)
-            {
-                result = result + "<never saved>";
-                return result;
-            }
-            
-            for(int i = 0; i < CPU.NUMGENREG; i++)
-            {
-                result = result + ("r" + i + "=" + registers[i] + " ");
-            }//for
-            result = result + ("PC=" + registers[CPU.PC] + " ");
-            result = result + ("SP=" + registers[CPU.SP] + " ");
-            result = result + ("BASE=" + registers[CPU.BASE] + " ");
-            result = result + ("LIM=" + registers[CPU.LIM] + " ");
-
-            return result;
-        }//toString
          
         /**
          * compareTo              

@@ -82,6 +82,7 @@ public class CPU
     //======================================================================
     //Callback Interface
     //----------------------------------------------------------------------
+
     /**
      * TrapHandler
      *
@@ -90,10 +91,12 @@ public class CPU
      */
     public interface TrapHandler
     {
-        void interruptIllegalMemoryAccess(int addr);
-        void interruptDivideByZero();
-        void interruptIllegalInstruction(int[] instr);
-        void systemCall();
+        public void interruptIOReadComplete(int devID, int addr, int data);
+        public void interruptIOWriteComplete(int devID, int addr);
+        public void interruptIllegalMemoryAccess(int addr);
+        public void interruptDivideByZero();
+        public void interruptIllegalInstruction(int[] instr);
+        public void systemCall();
     };//interface TrapHandler
 
     
@@ -302,6 +305,50 @@ public class CPU
             }//switch
 
     }//printInstr
+
+
+    /**
+     * checkForIOInterrupt
+     *
+     * Checks the databus for signals from the interrupt controller and, if
+     * found, invokes the appropriate handler in the operating system.
+     *
+     */
+    private void checkForIOInterrupt()
+    {
+        //If there is no interrupt to process, do nothing
+        if (m_IC.isEmpty())
+        {
+            return;
+        }
+        
+        //Retreive the interrupt data
+        int[] intData = m_IC.getData();
+
+        //Report the data if in verbose mode
+        if (m_verbose)
+        {
+            System.out.println("CPU received interrupt: type=" + intData[0]
+                               + " dev=" + intData[1] + " addr=" + intData[2]
+                               + " data=" + intData[3]);
+        }
+
+        //Dispatch the interrupt to the OS
+        switch(intData[0])
+        {
+            case InterruptController.INT_READ_DONE:
+                m_TH.interruptIOReadComplete(intData[1], intData[2], intData[3]);
+                break;
+            case InterruptController.INT_WRITE_DONE:
+                m_TH.interruptIOWriteComplete(intData[1], intData[2]);
+                break;
+            default:
+                System.out.println("CPU ERROR:  Illegal Interrupt Received.");
+                System.exit(-1);
+                break;
+        }//switch
+
+    }//checkForIOInterrupt
 
 
     /**
