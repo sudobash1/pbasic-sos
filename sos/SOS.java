@@ -167,7 +167,9 @@ public class SOS implements CPU.TrapHandler
     public void createIdleProcess()
     {
         int progArr[] = { 0, 0, 0, 0,   //SET r0=0
-                          0, 0, 0, 0,   //SET r0=0 (repeated instruction to account for vagaries in student implementation of the CPU class)
+                          0, 0, 0, 0,   //SET r0=0
+                         //(repeated instruction to account for vagaries in student
+                         //implementation of the CPU class)
                          10, 0, 0, 0,   //PUSH r0
                          15, 0, 0, 0 }; //TRAP
 
@@ -187,8 +189,8 @@ public class SOS implements CPU.TrapHandler
         }
         
         //Set the appropriate registers
-        m_CPU.setPC(baseAddr);
-        m_CPU.setSP(baseAddr + progArr.length + 10);
+        m_CPU.setPC(0);
+        m_CPU.setSP(progArr.length + 20);
         m_CPU.setBASE(baseAddr);
         m_CPU.setLIM(baseAddr + progArr.length + 20);
 
@@ -298,6 +300,8 @@ public class SOS implements CPU.TrapHandler
      */
     public void scheduleNewProcess()
     {
+        printProcessTable();
+
         if (m_processes.size() == 0) {
             System.exit(0);
         }
@@ -305,7 +309,9 @@ public class SOS implements CPU.TrapHandler
         ProcessControlBlock proc = getRandomProcess();
 
         if (proc == null) {
-            debugPrintln("We got a null for scheduleNewProcess");
+            //Schedule an idle process.
+            debugPrintln("Creating idle process...");
+            createIdleProcess();
             return;
         }
 
@@ -398,6 +404,46 @@ public class SOS implements CPU.TrapHandler
      *----------------------------------------------------------------------
      */
 
+
+    public void interruptIOReadComplete(int devID, int addr, int data) {
+        Device dev = getDeviceInfo(devID).getDevice();
+        ProcessControlBlock blocked = selectBlockedProcess(dev, SYSCALL_READ, addr);
+
+        //Load the blocked process into the CPU registers.
+        m_currProcess.save(m_CPU);
+        blocked.restore(m_CPU);
+
+        //Push the data and success code onto the stack.
+        m_CPU.pushStack(data);
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
+
+        //Restore the current process into the CPU registers.
+        blocked.save(m_CPU);
+        m_currProcess.restore(m_CPU);
+
+        //unblock the blocked process
+        blocked.unblock();
+    }
+
+    public void interruptIOWriteComplete(int devID, int addr) {
+        Device dev = getDeviceInfo(devID).getDevice();
+        ProcessControlBlock blocked = selectBlockedProcess(dev, SYSCALL_WRITE, addr);
+
+        //Load the blocked process into the CPU registers.
+        m_currProcess.save(m_CPU);
+        blocked.restore(m_CPU);
+
+        //Push the success code onto the stack.
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
+
+        //Restore the current process into the CPU registers.
+        blocked.save(m_CPU);
+        m_currProcess.restore(m_CPU);
+
+        //unblock the blocked process
+        blocked.unblock();
+    }
+
     /**
      * interruptIllegalMemoryAccess
      *
@@ -405,7 +451,7 @@ public class SOS implements CPU.TrapHandler
      *
      * @param addr The address which was attempted to be accessed
      */
-    public void interruptIllegalMemoryAccess(int addr){
+    public void interruptIllegalMemoryAccess(int addr) {
         System.out.println("Error: Illegal Memory Access at addr " + addr);
         System.out.println("NOW YOU DIE!!!");
         System.exit(0);
@@ -416,7 +462,7 @@ public class SOS implements CPU.TrapHandler
      *
      * Handles Divide by Zero interrupts.
      */
-    public void interruptDivideByZero(){
+    public void interruptDivideByZero() {
         System.out.println("Error: Divide by Zero");
         System.out.println("NOW YOU DIE!!!");
         System.exit(0);
@@ -429,7 +475,7 @@ public class SOS implements CPU.TrapHandler
      *
      * @param instr The instruction which caused the interrupt
      */
-    public void interruptIllegalInstruction(int[] instr){
+    public void interruptIllegalInstruction(int[] instr) {
         System.out.println("Error: Illegal Instruction:");
         System.out.println(instr[0] + ", " + instr[1] + ", " + instr[2] + ", " + instr[3]);
         System.out.println("NOW YOU DIE!!!");
@@ -488,7 +534,7 @@ public class SOS implements CPU.TrapHandler
         }
         if (! devInfo.device.isSharable() && ! devInfo.unused()) {
     
-            debugPrintln("Blocking proc " + m_currProcess);
+            debugPrintln("Blocking proc for open" + m_currProcess);
 
             //addr = -1 because this is not a read
             m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_OPEN, -1);
@@ -549,6 +595,22 @@ public class SOS implements CPU.TrapHandler
             m_CPU.pushStack(SYSCALL_RET_DNE);
             return;
         }
+        if (! devInfo.device.isAvailable() ) {
+
+            debugPrintln("Device is not avaliable for proc " + m_currProcess);
+
+            //Push the addr and devNum back onto the stack.
+            m_CPU.pushStack(devNum);
+            m_CPU.pushStack(addr);
+
+            //Decriment the PC counter so that the TRAP happens again
+            m_CPU.setPC( m_CPU.getPC() - m_CPU.INSTRSIZE );
+
+            //Try again later
+            scheduleNewProcess();
+
+            return;
+        }
         if (! devInfo.containsProcess(m_currProcess) ) {
             m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
             return;
@@ -558,10 +620,13 @@ public class SOS implements CPU.TrapHandler
             return;
         }
 
-        //Read from the device
-        int value = devInfo.getDevice().read(addr);
-        m_CPU.pushStack(value);
-        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
+        //Start to read
+        devInfo.getDevice().read(addr);
+
+        debugPrintln("Blocking proc for read " + m_currProcess);
+
+        m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_READ, addr);
+        scheduleNewProcess();
     }
 
     /**
@@ -579,6 +644,24 @@ public class SOS implements CPU.TrapHandler
             m_CPU.pushStack(SYSCALL_RET_DNE);
             return;
         }
+        if (! devInfo.device.isAvailable() ) {
+
+            debugPrintln("Device is not avaliable for proc " + m_currProcess);
+
+            //Push the value, addr and devNum back onto the stack.
+            m_CPU.pushStack(devNum);
+            m_CPU.pushStack(addr);
+            m_CPU.pushStack(value);
+
+            //Decriment the PC counter so that the TRAP happens again
+            m_CPU.setPC( m_CPU.getPC() - m_CPU.INSTRSIZE );
+            m_currProcess.save(m_CPU);
+
+            //Try again later
+            scheduleNewProcess();
+
+            return;
+        }
         if (! devInfo.containsProcess(m_currProcess) ) {
             m_CPU.pushStack(SYSCALL_RET_NOT_OPEN);
             return;
@@ -588,9 +671,13 @@ public class SOS implements CPU.TrapHandler
             return;
         }
 
-        //Write to the device
+        //Start to write
         devInfo.getDevice().write(addr, value);
-        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
+
+        debugPrintln("Blocking proc for write " + m_currProcess);
+
+        m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_WRITE, addr);
+        scheduleNewProcess();
     }
 
     /**

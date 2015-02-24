@@ -19,7 +19,7 @@ import java.util.*;
  * @see Sim
  */
 
-public class CPU
+public class CPU implements Runnable
 {
     
     //======================================================================
@@ -79,6 +79,14 @@ public class CPU
      **/
     private RAM m_RAM = null;
 
+
+    /**
+     * A pointer to the CPU's interrupt controller.
+     *
+     * @see InterruptController
+     **/
+    private InterruptController m_IC = null;
+
     //======================================================================
     //Callback Interface
     //----------------------------------------------------------------------
@@ -116,7 +124,7 @@ public class CPU
      *
      * Intializes all member variables.
      */
-    public CPU(RAM ram)
+    public CPU(RAM ram, InterruptController ic)
     {
         m_registers = new int[NUMREG];
         for(int i = 0; i < NUMREG; i++)
@@ -124,6 +132,8 @@ public class CPU
             m_registers[i] = 0;
         }
         m_RAM = ram;
+
+        m_IC = ic;
 
     }//CPU ctor 
 
@@ -407,6 +417,9 @@ public class CPU
     {
        
         while (true) {
+
+            //Check for ID Interrupt
+            checkForIOInterrupt();
 
             //Fetch next instruction
             int instr[] = m_RAM.fetch(m_registers[BASE] + m_registers[PC]);
