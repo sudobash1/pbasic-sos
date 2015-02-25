@@ -227,9 +227,10 @@ public class SOS implements CPU.TrapHandler
      */
     public void removeCurrentProcess()
     {
-        debugPrintln("Process ended " + m_currProcess);
-        m_processes.remove(m_currProcess);
-        m_currProcess = null;
+        if (m_currProcess != null) {
+            m_processes.remove(m_currProcess);
+            m_currProcess = null;
+        }
         scheduleNewProcess();
     }//removeCurrentProcess
 
@@ -311,7 +312,6 @@ public class SOS implements CPU.TrapHandler
 
         if (proc == null) {
             //Schedule an idle process.
-            debugPrintln("Creating idle process...");
             createIdleProcess();
             return;
         }
@@ -328,8 +328,6 @@ public class SOS implements CPU.TrapHandler
         //Set this process as the new current process
         m_currProcess = proc;
         m_currProcess.restore(m_CPU);
-
-        debugPrintln("Moved proc " + m_currProcess.getProcessId() + " from READY to RUNNING.");
     }//scheduleNewProcess
 
     /**
@@ -363,9 +361,6 @@ public class SOS implements CPU.TrapHandler
      */
     public void createProcess(Program prog, int allocSize)
     {
-
-        debugPrintln("Attempting to create new proc.");
-
         int base = m_nextLoadPos;
         int lim = base + allocSize;
 
@@ -373,7 +368,8 @@ public class SOS implements CPU.TrapHandler
             debugPrintln("Error: Out of memory for new process!");
             System.exit(0);
         }
-
+ 
+        //Next program will be loaded right after this one.
         m_nextLoadPos = lim + 1;
 
         if (m_currProcess != null) {
@@ -534,8 +530,6 @@ public class SOS implements CPU.TrapHandler
             return;
         }
         if (! devInfo.device.isSharable() && ! devInfo.unused()) {
-    
-            debugPrintln("Blocking proc for open" + m_currProcess);
 
             //addr = -1 because this is not a read
             m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_OPEN, -1);
@@ -545,7 +539,6 @@ public class SOS implements CPU.TrapHandler
             return;
         }
     
-        debugPrintln("Opened dev from proc:" + m_currProcess);
         //Associate the process with this device.
         devInfo.addProcess(m_currProcess);
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
@@ -569,7 +562,6 @@ public class SOS implements CPU.TrapHandler
             return;
         }
 
-        debugPrintln("Closed dev from proc:" + m_currProcess);
         //De-associate the process with this device.
         devInfo.removeProcess(m_currProcess);
         m_CPU.pushStack(SYSCALL_RET_SUCCESS);
@@ -577,7 +569,6 @@ public class SOS implements CPU.TrapHandler
         //Unblock next proc which wants to open this device
         ProcessControlBlock proc = selectBlockedProcess(devInfo.getDevice(), SYSCALL_OPEN, -1);
         if (proc != null) { 
-            debugPrintln("Un-Blocking proc " + proc);
             proc.unblock();
         }
     }
@@ -597,8 +588,6 @@ public class SOS implements CPU.TrapHandler
             return;
         }
         if (! devInfo.device.isAvailable() ) {
-
-            debugPrintln("Device is not avaliable for proc " + m_currProcess);
 
             //Push the addr, devNum, and syscall back onto the stack.
             m_CPU.pushStack(devNum);
@@ -625,8 +614,6 @@ public class SOS implements CPU.TrapHandler
         //Start to read
         devInfo.getDevice().read(addr);
 
-        debugPrintln("Blocking proc for read " + m_currProcess);
-
         m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_READ, addr);
         scheduleNewProcess();
     }
@@ -647,8 +634,6 @@ public class SOS implements CPU.TrapHandler
             return;
         }
         if (! devInfo.device.isAvailable() ) {
-
-            debugPrintln("Device is not avaliable for proc " + m_currProcess);
 
             //Push the value, addr, devNum and syscall back onto the stack.
             m_CPU.pushStack(devNum);
@@ -676,8 +661,6 @@ public class SOS implements CPU.TrapHandler
 
         //Start to write
         devInfo.getDevice().write(addr, value);
-
-        debugPrintln("Blocking proc for write " + m_currProcess);
 
         m_currProcess.block(m_CPU, devInfo.getDevice(), SYSCALL_WRITE, addr);
         scheduleNewProcess();
