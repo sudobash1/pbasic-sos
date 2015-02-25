@@ -227,6 +227,7 @@ public class SOS implements CPU.TrapHandler
      */
     public void removeCurrentProcess()
     {
+        debugPrintln("Process ended " + m_currProcess);
         m_processes.remove(m_currProcess);
         m_currProcess = null;
         scheduleNewProcess();
@@ -599,9 +600,10 @@ public class SOS implements CPU.TrapHandler
 
             debugPrintln("Device is not avaliable for proc " + m_currProcess);
 
-            //Push the addr and devNum back onto the stack.
+            //Push the addr, devNum, and syscall back onto the stack.
             m_CPU.pushStack(devNum);
             m_CPU.pushStack(addr);
+            m_CPU.pushStack(SYSCALL_READ);
 
             //Decriment the PC counter so that the TRAP happens again
             m_CPU.setPC( m_CPU.getPC() - m_CPU.INSTRSIZE );
@@ -648,10 +650,11 @@ public class SOS implements CPU.TrapHandler
 
             debugPrintln("Device is not avaliable for proc " + m_currProcess);
 
-            //Push the value, addr and devNum back onto the stack.
+            //Push the value, addr, devNum and syscall back onto the stack.
             m_CPU.pushStack(devNum);
             m_CPU.pushStack(addr);
             m_CPU.pushStack(value);
+            m_CPU.pushStack(SYSCALL_WRITE);
 
             //Decriment the PC counter so that the TRAP happens again
             m_CPU.setPC( m_CPU.getPC() - m_CPU.INSTRSIZE );
