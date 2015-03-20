@@ -19,7 +19,7 @@ import java.util.*;
  * @see Sim
  */
 
-public class CPU
+public class CPU implements Runnable
 {
     
     //======================================================================
@@ -79,9 +79,18 @@ public class CPU
      **/
     private RAM m_RAM = null;
 
+
+    /**
+     * A pointer to the CPU's interrupt controller.
+     *
+     * @see InterruptController
+     **/
+    private InterruptController m_IC = null;
+
     //======================================================================
     //Callback Interface
     //----------------------------------------------------------------------
+
     /**
      * TrapHandler
      *
@@ -90,10 +99,12 @@ public class CPU
      */
     public interface TrapHandler
     {
-        void interruptIllegalMemoryAccess(int addr);
-        void interruptDivideByZero();
-        void interruptIllegalInstruction(int[] instr);
-        void systemCall();
+        public void interruptIOReadComplete(int devID, int addr, int data);
+        public void interruptIOWriteComplete(int devID, int addr);
+        public void interruptIllegalMemoryAccess(int addr);
+        public void interruptDivideByZero();
+        public void interruptIllegalInstruction(int[] instr);
+        public void systemCall();
     };//interface TrapHandler
 
     
@@ -113,7 +124,7 @@ public class CPU
      *
      * Intializes all member variables.
      */
-    public CPU(RAM ram)
+    public CPU(RAM ram, InterruptController ic)
     {
         m_registers = new int[NUMREG];
         for(int i = 0; i < NUMREG; i++)
@@ -121,6 +132,8 @@ public class CPU
             m_registers[i] = 0;
         }
         m_RAM = ram;
+
+        m_IC = ic;
 
     }//CPU ctor 
 
@@ -305,6 +318,50 @@ public class CPU
 
 
     /**
+     * checkForIOInterrupt
+     *
+     * Checks the databus for signals from the interrupt controller and, if
+     * found, invokes the appropriate handler in the operating system.
+     *
+     */
+    private void checkForIOInterrupt()
+    {
+        //If there is no interrupt to process, do nothing
+        if (m_IC.isEmpty())
+        {
+            return;
+        }
+        
+        //Retreive the interrupt data
+        int[] intData = m_IC.getData();
+
+        //Report the data if in verbose mode
+        if (m_verbose)
+        {
+            System.out.println("CPU received interrupt: type=" + intData[0]
+                               + " dev=" + intData[1] + " addr=" + intData[2]
+                               + " data=" + intData[3]);
+        }
+
+        //Dispatch the interrupt to the OS
+        switch(intData[0])
+        {
+            case InterruptController.INT_READ_DONE:
+                m_TH.interruptIOReadComplete(intData[1], intData[2], intData[3]);
+                break;
+            case InterruptController.INT_WRITE_DONE:
+                m_TH.interruptIOWriteComplete(intData[1], intData[2]);
+                break;
+            default:
+                System.out.println("CPU ERROR:  Illegal Interrupt Received.");
+                System.exit(-1);
+                break;
+        }//switch
+
+    }//checkForIOInterrupt
+
+
+    /**
      * validMemory
      *
      * Determines if physical address respects BASE and LIM registers.
@@ -323,16 +380,45 @@ public class CPU
      * Pushes a value to the stack.
      *
      * @param value the value to push to the stack.
+     * @param registers the registers array to use.
      */
-    public void pushStack(int value) {
-        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
+    public void pushStack(int value, int[] registers) {
+        if (!validMemory(m_registers[SP] + registers[BASE])) {
             //Stack overflow!
             //This was probably deliberate because we had to overwrite the
             //program with stack memory to do this.
-            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
+            m_TH.interruptIllegalMemoryAccess(registers[SP] + registers[BASE]);
         }
-        m_RAM.write(m_registers[SP] + m_registers[BASE], value);
-        m_registers[SP]--;
+        m_RAM.write(registers[SP] + registers[BASE], value);
+        registers[SP]--;
+    }
+
+    /**
+     * popStack
+     *
+     * Pops a value from the stack.
+     *
+     * @return The value poped from the stack.
+     * @param registers the registers array to use.
+     */
+    public int popStack(int[] registers) {
+        registers[SP]++;
+        if (!validMemory(registers[SP] + registers[BASE])) {
+            //Stack underflow!
+            m_TH.interruptIllegalMemoryAccess(registers[SP] + registers[BASE]);
+        }
+        return m_RAM.read(registers[SP] + registers[BASE]);
+    }
+
+    /**
+     * pushStack
+     *
+     * Pushes a value to the stack.
+     *
+     * @param value the value to push to the stack.
+     */
+    public void pushStack(int value) {
+        pushStack(value, m_registers);
     }
 
     /**
@@ -343,12 +429,7 @@ public class CPU
      * @return The value poped from the stack.
      */
     public int popStack() {
-        m_registers[SP]++;
-        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
-            //Stack underflow!
-            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
-        }
-        return m_RAM.read(m_registers[SP] + m_registers[BASE]);
+        return popStack(m_registers);
     }
 
     /**
@@ -360,6 +441,9 @@ public class CPU
     {
        
         while (true) {
+
+            //Check for ID Interrupt
+            checkForIOInterrupt();
 
             //Fetch next instruction
             int instr[] = m_RAM.fetch(m_registers[BASE] + m_registers[PC]);
