@@ -153,7 +153,7 @@ public class Sim
                     num = Integer.valueOf(args[i]);
                 } catch (NumberFormatException e) {
                     System.out.println( 
-                        "Invalid value for -r. Number expected."
+                        "Invalid value for " + args[i-1] + ". Number expected."
                     );
                     printUsage();
                 }
@@ -231,14 +231,28 @@ public class Sim
             //If this is our main program
             if (m_mainProgram == null) {
                 m_mainProgram = prog;
+
+                //By default we will give it twice the minimum mem needed.
+                m_mainProgram.setDefaultAllocSize(
+                    Math.min(prog.getSize() * 2, m_ramAmount - 1)
+                );
             } else {
                 m_programs.add(prog);
             }
         }
+
         if (m_mainProgram == null) {
-            System.out.println("ERROR: Requires a prog.asm argument.")
+            System.out.println("ERROR: Requires a prog.asm argument.");
             printUsage();
         }
+
+        if (ramSizeArgumentNext || ramLatencyArgumentNext || sizeArgumentNext){
+            System.out.println(
+                "ERROR: " + args[args.length-1] + " expects an argument"
+            );
+            printUsage();
+        }
+
     }
 
     /**
