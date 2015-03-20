@@ -115,7 +115,7 @@ public class Sim
     private void printUsage() {
         System.out.println(
             "Usage: java sos.sim [-r ram_size] [-l ram_latency]" +
-            "prog.asm [-s size] prog2.asm [-s size] ..."
+            "prog.asm [-s size] [prog2.asm [-s size]] ..."
         );
         System.exit(-1337);
     }
@@ -212,7 +212,7 @@ public class Sim
             if (args[i].equals("-s")) {
                 if (prog == null) {
                     System.out.println(
-                        "-s flag requires a program.asm argument"
+                        "-s flag requires a progN.asm argument"
                     );
                     printUsage();
                 }
@@ -234,6 +234,10 @@ public class Sim
             } else {
                 m_programs.add(prog);
             }
+        }
+        if (m_mainProgram == null) {
+            System.out.println("ERROR: Requires a prog.asm argument.")
+            printUsage();
         }
     }
 
