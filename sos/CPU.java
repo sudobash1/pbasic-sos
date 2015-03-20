@@ -367,11 +367,25 @@ public class CPU implements Runnable
      * Determines if physical address respects BASE and LIM registers.
      *
      * @param addr the address to check
+     * @param registers the registers array to use.
+     *
+     * @return true iff the address is valid.
+     */
+    public boolean validMemory(int addr, int[] registers){
+        return (addr >= registers[BASE] && addr <= registers[LIM]);
+    }
+
+    /**
+     * validMemory
+     *
+     * Determines if physical address respects BASE and LIM registers.
+     *
+     * @param addr the address to check
      *
      * @return true iff the address is valid.
      */
     public boolean validMemory(int addr){
-        return (addr >= m_registers[BASE] && addr <= m_registers[LIM]);
+        return validMemory(addr, m_registers);
     }
 
     /**
@@ -383,7 +397,7 @@ public class CPU implements Runnable
      * @param registers the registers array to use.
      */
     public void pushStack(int value, int[] registers) {
-        if (!validMemory(m_registers[SP] + registers[BASE])) {
+        if (!validMemory(m_registers[SP] + registers[BASE], registers)) {
             //Stack overflow!
             //This was probably deliberate because we had to overwrite the
             //program with stack memory to do this.
@@ -403,7 +417,7 @@ public class CPU implements Runnable
      */
     public int popStack(int[] registers) {
         registers[SP]++;
-        if (!validMemory(registers[SP] + registers[BASE])) {
+        if (!validMemory(registers[SP] + registers[BASE], registers)) {
             //Stack underflow!
             m_TH.interruptIllegalMemoryAccess(registers[SP] + registers[BASE]);
         }
