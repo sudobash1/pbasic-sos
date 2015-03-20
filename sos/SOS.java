@@ -409,17 +409,9 @@ public class SOS implements CPU.TrapHandler
         Device dev = getDeviceInfo(devID).getDevice();
         ProcessControlBlock blocked = selectBlockedProcess(dev, SYSCALL_READ, addr);
 
-        //Load the blocked process into the CPU registers.
-        m_currProcess.save(m_CPU);
-        blocked.restore(m_CPU);
-
         //Push the data and success code onto the stack.
-        m_CPU.pushStack(data);
-        m_CPU.pushStack(SYSCALL_RET_SUCCESS);
-
-        //Restore the current process into the CPU registers.
-        blocked.save(m_CPU);
-        m_currProcess.restore(m_CPU);
+        m_CPU.pushStack(data, blocked.getRegisters());
+        m_CPU.pushStack(SYSCALL_RET_SUCCESS, blocked.getRegisters());
 
         //unblock the blocked process
         blocked.unblock();
@@ -875,6 +867,13 @@ public class SOS implements CPU.TrapHandler
         public int getProcessId()
         {
             return this.processId;
+        }
+
+        /**
+         * @return the process' registers array
+         */
+        public int[] getRegisters() {
+            return registers;
         }
 
         /**
