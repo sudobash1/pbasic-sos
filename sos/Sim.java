@@ -14,6 +14,25 @@ import java.util.*;
  */
 public class Sim
 {
+
+    private Program m_mainProgram = null;
+    private ArrayList<Program> m_programs = null;
+    private int m_ramAmount = 4000;
+    private int m_ramLatency = 10;
+    private ExitCatcher m_ec = null;
+
+    public Sim(String [] args) {
+
+        m_programs = new ArrayList<Program>();
+
+        //parse the command line arguments.
+        parseArgs(args);
+
+        //Start catching System.exit
+        m_ec = new ExitCatcher();
+        System.setSecurityManager(m_ec);
+    }
+
     /*======================================================================-
      * Inner Classes
      *----------------------------------------------------------------------
@@ -81,144 +100,151 @@ public class Sim
     }//DoNothingHandler
 
     /*======================================================================-
-     * Member Variables
-     *----------------------------------------------------------------------
-     */
-    
-    /*======================================================================-
      * Methods
      *----------------------------------------------------------------------
      */
-    
-    /**
-     * runSimple
-     *
-     * runs a single counting program that prints to the console
-     *
-     *
-     */
-    public static void runSimple()
-    {
-        //Create the simulated hardware and OS
-        RAM ram = new RAM(1000, 10);
-        ConsoleDevice cd = new ConsoleDevice();
-        CPU cpu = new CPU(ram);
-        SOS os  = new SOS(cpu, ram);
-
-        //Register the device drivers with the OS
-        os.registerDevice(cd, 1);
-
-        //Load the program into RAM
-        Program prog = new Program();
-        if (prog.load("print40.asm", false) != 0)
-        {
-            //Error loading program so exit
-            return;
-        }
-        os.createProcess(prog,  200);
-
-        //Run the simulation
-        cpu.run();
-        
-    }//runSimple
-
 
     /**
-     * runMultiple1
+     * printUsage
      *
-     * runs one process that spawns five others.  Each spawned process should
-     * run to completion without being interrupted.
-     *
-     *
+     * Print the usage message and exits.
      */
-    public static void runMultiple1()
-    {
-        //Create the simulated hardware and OS
-        RAM ram = new RAM(5000, 10);
-        ConsoleDevice cd = new ConsoleDevice();
-        CPU cpu = new CPU(ram);
-        SOS os  = new SOS(cpu, ram);
-
-        //Register the device drivers with the OS
-        os.registerDevice(cd, 1);
-
-        //Load the program into RAM
-        Program prog = new Program();
-        if (prog.load("spawn5.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load spawn5.asm");
-            return;
-        }
-        os.createProcess(prog,  200);
-
-        //Register count40.asm as a program that can be run via an Exec system call
-        Program prog2 = new Program();
-        if (prog2.load("print40.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load print40.asm");
-            return;
-        }
-        os.addProgram(prog2);
-
-        //Run the simulation
-        cpu.run();
-        
-    }//runMultiple1
+    private void printUsage() {
+        System.out.println(
+            "Usage: java sos.sim [-r ram_size] [-l ram_latency]" +
+            "prog.asm [-s size] prog2.asm [-s size] ..."
+        );
+        System.exit(-1337);
+    }
 
     /**
-     * runMultiple2
+     * parseArgs
      *
-     * runs one process that spawns five others.  Each spawned process should
-     * yield the CPU on a regular basis which will result in multiple
-     * context switches.
+     * Parse the command line arguments and place the results in instance
+     * variables.
      *
+     * @param args The arguments passed in from the command line.
      */
-    public static void runMultiple2()
-    {
-        //Create the simulated hardware and OS
-        RAM ram = new RAM(5000, 10);
-        ConsoleDevice cd = new ConsoleDevice();
-        CPU cpu = new CPU(ram);
-        SOS os  = new SOS(cpu, ram);
-
-        //Register the device drivers with the OS
-        os.registerDevice(cd, 1);
-
-        //Load the program into RAM
-        Program prog = new Program();
-        if (prog.load("spawn5.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load spawn5.asm");
-            return;
+    private void parseArgs(String[] args) {
+        //Check that there are enough command line arguments
+        if (args.length == 0) {
+            printUsage();
         }
-        os.createProcess(prog,  200);
 
-        //Register count40.asm as a program that can be run via an Exec system call
-        Program prog2 = new Program();
-        if (prog2.load("print40yield.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load print40yield.asm");
-            return;
+        Program prog = null;
+
+        boolean ramSizeArgumentFound = false;
+        boolean ramSizeArgumentNext = false;
+        boolean ramLatencyArgumentFound = false;
+        boolean ramLatencyArgumentNext = false;
+        boolean sizeArgumentNext = false;
+        for (int i=0; i < args.length; ++i) {
+
+            //If we just saw an -r -s or -l flag
+            if (ramSizeArgumentNext ||
+                ramLatencyArgumentNext ||
+                sizeArgumentNext)
+            {
+                int num = 0;
+                try {
+                    num = Integer.valueOf(args[i]);
+                } catch (NumberFormatException e) {
+                    System.out.println( 
+                        "Invalid value for -r. Number expected."
+                    );
+                    printUsage();
+                }
+
+                if (ramSizeArgumentNext) { m_ramAmount = num; }
+                if (ramLatencyArgumentNext) { m_ramLatency = num; }
+                if (sizeArgumentNext) {
+                    prog.setDefaultAllocSize(num);
+                    prog = null;
+                }
+
+                ramSizeArgumentNext = false;
+                ramLatencyArgumentNext = false;
+                sizeArgumentNext = false;
+                
+                continue;
+            }
+            
+            //If we are looking at an -r flag.
+            if (args[i].equals("-r")) {
+                if (ramSizeArgumentFound) {
+                    System.out.println("Duplicate -r flag.");
+                    printUsage();
+                }
+                if (m_mainProgram != null) {
+                    System.out.println(
+                        "Flag -r must be before program arguments."
+                    );
+                    printUsage();
+                }
+                ramSizeArgumentFound = true;
+                ramSizeArgumentNext = true;
+
+                continue;
+            }
+
+            //If we are looking at an -l flag.
+            if (args[i].equals("-l")) {
+                if (ramLatencyArgumentFound) {
+                    System.out.println("Duplicate -l flag.");
+                    printUsage();
+                }
+                if (m_mainProgram != null) {
+                    System.out.println(
+                        "Flag -l must be before program arguments."
+                    );
+                    printUsage();
+                }
+                ramLatencyArgumentFound = true;
+                ramLatencyArgumentNext = true;
+
+                continue;
+            }
+
+            //If we are looking at a -s flag
+            if (args[i].equals("-s")) {
+                if (prog == null) {
+                    System.out.println(
+                        "-s flag requires a program.asm argument"
+                    );
+                    printUsage();
+                }
+                sizeArgumentNext = true;
+
+                continue;
+            }
+
+            //We are looking at a filename argument
+            prog = new Program();
+            if (prog.load(args[i], false) != 0) {
+                System.out.println("ERROR: Could not load `" + args[i] + "'");
+                System.exit(-7);
+            }
+
+            //If this is our main program
+            if (m_mainProgram == null) {
+                m_mainProgram = prog;
+            } else {
+                m_programs.add(prog);
+            }
         }
-        os.addProgram(prog2);
-
-        //Run the simulation
-        cpu.run();
-        
-    }//runMultiple2
+    }
 
     /**
-     * runMultiple3
+     * runSimulation
      *
-     * runs one process that spawns five others.  Each spawned process will read
-     * from the keyboard and write to the console.  The processes will also
-     * yield the CPU on a regular basis
-     *
+     * Runs a process from assembly file given on command line. Other programs
+     * may be loaded by specifying additional assembly files.
      */
-    public static void runMultiple3()
+    private void runSimulation()
     {
+
         //Create the simulated hardware and OS
-        RAM ram = new RAM(5000, 10);
+        RAM ram = new RAM(m_ramAmount, m_ramLatency);
         KeyboardDevice kd = new KeyboardDevice();
         ConsoleDevice cd = new ConsoleDevice();
         CPU cpu = new CPU(ram);
@@ -229,50 +255,31 @@ public class Sim
         os.registerDevice(cd, 1);
 
         //Load the program into RAM
-        Program prog = new Program();
-        if (prog.load("spawn5.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load spawn5.asm");
-            return;
-        }
-        os.createProcess(prog,  200);
+        os.createProcess(m_mainProgram, m_mainProgram.getDefaultAllocSize());
 
-        //Register count40.asm as a program that can be run via an Exec system call
-        Program prog2 = new Program();
-        if (prog2.load("readwriteyield.asm", false) != 0)
-        {
-            System.out.println("ERROR: Could not load readwriteyield.asm");
-            return;
+        //Register other programs as ones that can be run via an Exec
+        //system call
+        for (Program prog : m_programs) {
+            os.addProgram(prog);
         }
-        os.addProgram(prog2);
 
         //Run the simulation
         cpu.run();
-        
-    }//runMultiple3
+    }
 
 
     /**
-     * main
-     *
      * This function makes the simulation go.
-     *
      */
-    public static void main(String[] args)
+    public int run()
     {
-        //Start catching System.exit
-        ExitCatcher ec = new ExitCatcher();
-        System.setSecurityManager(ec);
-
-        //Delay for any threads that might be winding down
         //Do a timed run
         long startTime = System.currentTimeMillis();
         long endTime = System.currentTimeMillis();
         try
         {
             //Run the simulation
-            //runSimple();
-            runMultiple1();
+            runSimulation();
 
             //Record the ending time
             endTime = System.currentTimeMillis();
@@ -290,14 +297,12 @@ public class Sim
             System.out.println("EXCEPTION THROWN DURING SIMULATION:");
             e.printStackTrace();
         }
-        
-
 
         //If System.exit was not called by any thread then bypass that
         //protection now
-        if (! ec.isExitCaught())
+        if (! m_ec.isExitCaught())
         {
-            try{ System.exit(-42); } catch (SecurityException se) { }
+            return -42;
         }
 
         //Print the final timing info for the user
@@ -306,8 +311,12 @@ public class Sim
         System.out.println("END OF SIMULATION");
         System.out.println("Total Simulation Time: " + (endTime - startTime) + "ms");
 
-        System.exit(0);
-        
-    }//main
+        return 0;
+    }
+
+    public static void main(String[] args){
+        Sim sim = new Sim(args);
+        try{ System.exit(sim.run()); } catch (SecurityException se) { }
+    }
     
-};//class Sim
+};
