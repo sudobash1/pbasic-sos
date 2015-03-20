@@ -20,6 +20,7 @@ public class Sim
     private int m_ramAmount = 4000;
     private int m_ramLatency = 10;
     private ExitCatcher m_ec = null;
+    private DoNothingHandler m_dnh = null;
 
     public Sim(String [] args) {
 
@@ -31,6 +32,8 @@ public class Sim
         //Start catching System.exit
         m_ec = new ExitCatcher();
         System.setSecurityManager(m_ec);
+
+        m_dnh = new DoNothingHandler();
     }
 
     /*======================================================================-
@@ -245,9 +248,12 @@ public class Sim
 
         //Create the simulated hardware and OS
         RAM ram = new RAM(m_ramAmount, m_ramLatency);
-        KeyboardDevice kd = new KeyboardDevice();
-        ConsoleDevice cd = new ConsoleDevice();
-        CPU cpu = new CPU(ram);
+        InterruptController ic = new InterruptController();
+        KeyboardDevice kd = new KeyboardDevice(ic);
+        ConsoleDevice cd = new ConsoleDevice(ic);
+        kd.setId(0);
+        cd.setId(1);
+        CPU cpu = new CPU(ram, ic);
         SOS os  = new SOS(cpu, ram);
 
         //Register the device drivers with the OS
@@ -263,8 +269,32 @@ public class Sim
             os.addProgram(prog);
         }
 
+        //Start up the devices
+        Thread t = new Thread(cd);
+        t.setUncaughtExceptionHandler(m_dnh);
+        t.start();
+        t = new Thread(kd);
+        t.setUncaughtExceptionHandler(m_dnh);
+        t.start();
+        
         //Run the simulation
-        cpu.run();
+        t = new Thread(cpu);
+        t.setUncaughtExceptionHandler(m_dnh);
+        t.start();
+
+        //Wait until System.exit() is called
+        while(!m_ec.isExitCaught())
+        {
+            try
+            {
+                t.join(1000);
+            }
+            catch(InterruptedException ie)
+            {
+                System.out.println("Interrupted!");
+                return;
+            }
+        }//while
     }
 
 
