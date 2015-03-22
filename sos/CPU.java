@@ -367,11 +367,61 @@ public class CPU implements Runnable
      * Determines if physical address respects BASE and LIM registers.
      *
      * @param addr the address to check
+     * @param registers the registers array to use.
+     *
+     * @return true iff the address is valid.
+     */
+    public boolean validMemory(int addr, int[] registers){
+        return (addr >= registers[BASE] && addr <= registers[LIM]);
+    }
+
+    /**
+     * validMemory
+     *
+     * Determines if physical address respects BASE and LIM registers.
+     *
+     * @param addr the address to check
      *
      * @return true iff the address is valid.
      */
     public boolean validMemory(int addr){
-        return (addr >= m_registers[BASE] && addr <= m_registers[LIM]);
+        return validMemory(addr, m_registers);
+    }
+
+    /**
+     * pushStack
+     *
+     * Pushes a value to the stack.
+     *
+     * @param value the value to push to the stack.
+     * @param registers the registers array to use.
+     */
+    public void pushStack(int value, int[] registers) {
+        if (!validMemory(m_registers[SP] + registers[BASE], registers)) {
+            //Stack overflow!
+            //This was probably deliberate because we had to overwrite the
+            //program with stack memory to do this.
+            m_TH.interruptIllegalMemoryAccess(registers[SP] + registers[BASE]);
+        }
+        m_RAM.write(registers[SP] + registers[BASE], value);
+        registers[SP]--;
+    }
+
+    /**
+     * popStack
+     *
+     * Pops a value from the stack.
+     *
+     * @return The value poped from the stack.
+     * @param registers the registers array to use.
+     */
+    public int popStack(int[] registers) {
+        registers[SP]++;
+        if (!validMemory(registers[SP] + registers[BASE], registers)) {
+            //Stack underflow!
+            m_TH.interruptIllegalMemoryAccess(registers[SP] + registers[BASE]);
+        }
+        return m_RAM.read(registers[SP] + registers[BASE]);
     }
 
     /**
@@ -382,14 +432,7 @@ public class CPU implements Runnable
      * @param value the value to push to the stack.
      */
     public void pushStack(int value) {
-        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
-            //Stack overflow!
-            //This was probably deliberate because we had to overwrite the
-            //program with stack memory to do this.
-            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
-        }
-        m_RAM.write(m_registers[SP] + m_registers[BASE], value);
-        m_registers[SP]--;
+        pushStack(value, m_registers);
     }
 
     /**
@@ -400,12 +443,7 @@ public class CPU implements Runnable
      * @return The value poped from the stack.
      */
     public int popStack() {
-        m_registers[SP]++;
-        if (!validMemory(m_registers[SP] + m_registers[BASE])) {
-            //Stack underflow!
-            m_TH.interruptIllegalMemoryAccess(m_registers[SP] + m_registers[BASE]);
-        }
-        return m_RAM.read(m_registers[SP] + m_registers[BASE]);
+        return popStack(m_registers);
     }
 
     /**
